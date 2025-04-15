@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Kontrol ESP via MQTT</title>
+  <title>Kontrol Relay ESP8266</title>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
     body {
@@ -34,23 +34,18 @@
 </head>
 <body>
 
-  <h1>ESP MQTT Kontrol Panel</h1>
+  <h1>Kontrol Relay MQTT</h1>
 
   <div class="section">
     <h2>Relay 1</h2>
-    <button id="relay1Btn" class="off" onclick="toggleRelay('relay1')">Relay1: OFF</button>
-    <p>Status (dari ESP): <span id="relay1Status">OFF</span></p>
+    <button id="relay1Btn" class="off" onclick="toggleRelay('relay1')">Relay 1: OFF</button>
+    <p class="status">Status (dari ESP): <span id="relay1Status">OFF</span></p>
   </div>
 
   <div class="section">
     <h2>Relay 2</h2>
-    <button id="relay2Btn" class="off" onclick="toggleRelay('relay2')">Relay2: OFF</button>
-    <p>Status (dari ESP): <span id="relay2Status">OFF</span></p>
-  </div>
-
-  <div class="section">
-    <h2>Suhu</h2>
-    <p>🌡️ <span id="suhu">-</span> °C</p>
+    <button id="relay2Btn" class="off" onclick="toggleRelay('relay2')">Relay 2: OFF</button>
+    <p class="status">Status (dari ESP): <span id="relay2Status">OFF</span></p>
   </div>
 
   <script>
@@ -65,43 +60,48 @@
     const connectUrl = 'wss://3c745a388bec4b4fa3def162b723c4a4.s1.eu.hivemq.cloud:8884/mqtt';
     const client = mqtt.connect(connectUrl, options);
 
+    let relayStatus = {
+      relay1: 'OFF',
+      relay2: 'OFF'
+    };
+
     client.on('connect', () => {
-      console.log('✅ Terhubung ke MQTT Broker');
+      console.log('✅ Terhubung ke MQTT');
       client.subscribe('esp/status/relay1');
       client.subscribe('esp/status/relay2');
-      client.subscribe('esp/suhu');
     });
 
     client.on('message', (topic, message) => {
       const msg = message.toString();
 
       if (topic === 'esp/status/relay1') {
-        updateStatusOnly('relay1', msg);
+        relayStatus.relay1 = msg;
+        updateStatusOnly('relay1', msg); // hanya update status, bukan tombol
       }
 
       if (topic === 'esp/status/relay2') {
-        updateStatusOnly('relay2', msg);
-      }
-
-      if (topic === 'esp/suhu') {
-        document.getElementById('suhu').innerText = msg;
+        relayStatus.relay2 = msg;
+        updateStatusOnly('relay2', msg); // hanya update status, bukan tombol
       }
     });
 
     function toggleRelay(relay) {
-      const btn = document.getElementById(`${relay}Btn`);
-      const newState = btn.classList.contains('off') ? 'ON' : 'OFF';
+      const currentBtn = document.getElementById(`${relay}Btn`);
+      const newState = currentBtn.classList.contains('off') ? 'ON' : 'OFF';
       client.publish(`esp/${relay}`, newState);
+
+      // Langsung ubah tampilan tombol (optimistik)
+      currentBtn.innerText = `${relay.charAt(0).toUpperCase() + relay.slice(1)}: ${newState}`;
+      currentBtn.classList.toggle('on', newState === 'ON');
+      currentBtn.classList.toggle('off', newState === 'OFF');
     }
 
+    // Hanya update status dari feedback Arduino
     function updateStatusOnly(relay, state) {
       const statusSpan = document.getElementById(`${relay}Status`);
-      const btn = document.getElementById(`${relay}Btn`);
       statusSpan.innerText = state;
-      btn.innerText = `${relay.charAt(0).toUpperCase() + relay.slice(1)}: ${state}`;
-      btn.classList.toggle('on', state === 'ON');
-      btn.classList.toggle('off', state === 'OFF');
     }
   </script>
+
 </body>
 </html>
