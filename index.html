@@ -1,72 +1,166 @@
-<script>
-  const options = {
-    clean: true,
-    connectTimeout: 4000,
-    clientId: 'webClient_' + Math.floor(Math.random() * 1000),
-    username: 'Atalarik',
-    password: 'Atalarik21'
-  };
-
-  const connectUrl = 'wss://3c745a388bec4b4fa3def162b723c4a4.s1.eu.hivemq.cloud:8884/mqtt';
-  const client = mqtt.connect(connectUrl, options);
-
-  const led = document.getElementById('led');
-  const connectionStatus = document.getElementById('connectionStatus');
-
-  client.on('connect', () => {
-    console.log('✅ Terhubung ke MQTT');
-    led.style.backgroundColor = 'green';
-    connectionStatus.innerText = 'Online';
-
-    client.subscribe('esp/status/relay1');
-    client.subscribe('esp/status/relay2');
-    client.publish('esp/get_status', 'REQ');
-  });
-
-  client.on('reconnect', () => {
-    led.style.backgroundColor = 'orange';
-    connectionStatus.innerText = 'Menyambung...';
-  });
-
-  client.on('error', (error) => {
-    console.error('MQTT Error:', error);
-    led.style.backgroundColor = 'red';
-    connectionStatus.innerText = 'Error';
-  });
-
-  client.on('offline', () => {
-    led.style.backgroundColor = 'grey';
-    connectionStatus.innerText = 'Offline';
-  });
-
-  client.on('message', (topic, message) => {
-    const msg = message.toString();
-
-    if (topic === 'esp/status/relay1') {
-      updateRelayStatusUI('relay1', msg);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ATTAMATION</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #fefefe;
+      color: #1f2350;
+      margin: 0;
+      padding: 30px;
+      text-align: center;
     }
 
-    if (topic === 'esp/status/relay2') {
-      updateRelayStatusUI('relay2', msg);
+    .status-led {
+      display: flex;
+      align-items: center;
+      position: absolute;
+      top: 20px;
+      left: 20px;
     }
-  });
 
-  function toggleRelay(relay) {
-    const btn = document.getElementById(`${relay}Btn`);
-    const newState = btn.innerText === 'OFF' ? 'ON' : 'OFF';
+    .led {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background-color: grey;
+      margin-right: 10px;
+      border: 1px solid #ccc;
+    }
 
-    // Optimistic update tombol (langsung ubah tampilan)
-    btn.innerText = newState;
-    btn.classList.toggle('on', newState === 'ON');
-    btn.classList.toggle('off', newState === 'OFF');
+    h1 {
+      font-size: 32px;
+      margin-bottom: 40px;
+      font-weight: bold;
+    }
 
-    // Kirim perintah ke ESP
-    client.publish(`esp/${relay}`, newState);
-  }
+    .relay-container {
+      margin-bottom: 50px;
+    }
 
-  function updateRelayStatusUI(relay, state) {
-    // Status dari feedback ESP akan ditampilkan di bawah tombol
-    const statusSpan = document.getElementById(`${relay}Status`);
-    statusSpan.innerText = state;
-  }
-</script>
+    .relay-title {
+      font-size: 24px;
+      margin-bottom: 15px;
+    }
+
+    .relay-button {
+      font-size: 20px;
+      width: 100px;
+      height: 100px;
+      border: 2px solid #1f2350;
+      border-radius: 50%;
+      background-color: white;
+      color: #1f2350;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+
+    .relay-button.on {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    .status-text {
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="status-led">
+    <div class="led" id="led"></div>
+    <div id="connectionStatus">Offline</div>
+  </div>
+
+  <h1>ATTAMATION</h1>
+
+  <div class="relay-container">
+    <div class="relay-title">Relay 1</div>
+    <button id="relay1Btn" class="relay-button off" onclick="toggleRelay('relay1')">OFF</button>
+    <div class="status-text">Status = <span id="relay1Status">OFF</span></div>
+  </div>
+
+  <div class="relay-container">
+    <div class="relay-title">Relay 2</div>
+    <button id="relay2Btn" class="relay-button off" onclick="toggleRelay('relay2')">OFF</button>
+    <div class="status-text">Status = <span id="relay2Status">OFF</span></div>
+  </div>
+
+  <script>
+    window.onload = () => {
+      const options = {
+        clean: true,
+        connectTimeout: 4000,
+        clientId: 'webClient_' + Math.floor(Math.random() * 1000),
+        username: 'Atalarik',
+        password: 'Atalarik21'
+      };
+
+      const connectUrl = 'wss://3c745a388bec4b4fa3def162b723c4a4.s1.eu.hivemq.cloud:8884/mqtt';
+      const client = mqtt.connect(connectUrl, options);
+
+      const led = document.getElementById('led');
+      const connectionStatus = document.getElementById('connectionStatus');
+
+      client.on('connect', () => {
+        console.log('✅ Terhubung ke MQTT');
+        led.style.backgroundColor = 'green';
+        connectionStatus.innerText = 'Online';
+
+        client.subscribe('esp/status/relay1');
+        client.subscribe('esp/status/relay2');
+        client.publish('esp/get_status', 'REQ');
+      });
+
+      client.on('reconnect', () => {
+        led.style.backgroundColor = 'orange';
+        connectionStatus.innerText = 'Menyambung...';
+      });
+
+      client.on('error', (error) => {
+        console.error('MQTT Error:', error);
+        led.style.backgroundColor = 'red';
+        connectionStatus.innerText = 'Error';
+      });
+
+      client.on('offline', () => {
+        led.style.backgroundColor = 'grey';
+        connectionStatus.innerText = 'Offline';
+      });
+
+      client.on('message', (topic, message) => {
+        const msg = message.toString();
+
+        if (topic === 'esp/status/relay1') {
+          updateRelayStatusUI('relay1', msg);
+        }
+
+        if (topic === 'esp/status/relay2') {
+          updateRelayStatusUI('relay2', msg);
+        }
+      });
+
+      window.toggleRelay = function (relay) {
+        const btn = document.getElementById(`${relay}Btn`);
+        const newState = btn.innerText === 'OFF' ? 'ON' : 'OFF';
+
+        // Optimistic update tampilan tombol
+        btn.innerText = newState;
+        btn.classList.toggle('on', newState === 'ON');
+        btn.classList.toggle('off', newState === 'OFF');
+
+        // Kirim perintah ke ESP
+        client.publish(`esp/${relay}`, newState);
+      }
+
+      function updateRelayStatusUI(relay, state) {
+        const statusSpan = document.getElementById(`${relay}Status`);
+        statusSpan.innerText = state;
+      }
+    };
+  </script>
+</body>
+</html>
