@@ -1,92 +1,143 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ATTAMATION</title>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --primary: #00f7ff;
+      --secondary: #ff00aa;
+      --bg: #0a0a1a;
+      --light: #e0e0ff;
+      --gray: #888;
+      --success: #4CAF50;
+      --danger: #f44336;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background-color: #fefefe;
-      color: #1f2350;
       margin: 0;
-      padding: 30px;
-      text-align: center;
+      font-family: 'Orbitron', sans-serif;
+      background-color: var(--bg);
+      color: var(--light);
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .status-led {
       display: flex;
       align-items: center;
-      position: absolute;
-      top: 20px;
-      left: 20px;
     }
 
     .led {
       width: 15px;
       height: 15px;
       border-radius: 50%;
-      background-color: grey;
+      background-color: var(--gray);
       margin-right: 10px;
       border: 1px solid #ccc;
     }
 
-    h1 {
-      font-size: 32px;
-      margin-bottom: 40px;
-      font-weight: bold;
+    .title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--primary);
+      text-shadow: 0 0 10px var(--primary);
     }
 
-    .relay-container {
-      margin-bottom: 50px;
+    .container {
+      padding: 2rem;
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .relay-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 1.5rem;
+      text-align: center;
+      width: 180px;
+      box-shadow: 0 0 10px rgba(0, 247, 255, 0.1);
     }
 
     .relay-title {
-      font-size: 24px;
-      margin-bottom: 15px;
+      margin-bottom: 1rem;
+      font-size: 1rem;
     }
 
     .relay-button {
-      font-size: 20px;
       width: 100px;
       height: 100px;
-      border: 2px solid #1f2350;
       border-radius: 50%;
-      background-color: white;
-      color: #1f2350;
+      border: 2px solid var(--primary);
+      background-color: transparent;
+      color: var(--primary);
+      font-size: 1.2rem;
       cursor: pointer;
-      margin-bottom: 10px;
+      transition: all 0.3s ease;
     }
 
     .relay-button.on {
-      background-color: #4CAF50;
+      background-color: var(--success);
       color: white;
     }
 
     .status-text {
-      font-size: 18px;
+      margin-top: 0.8rem;
+      font-size: 0.9rem;
+      color: var(--light);
     }
   </style>
 </head>
 <body>
-
-  <div class="status-led">
-    <div class="led" id="led"></div>
-    <div id="connectionStatus">Offline</div>
+  <div class="header">
+    <div class="status-led">
+      <div class="led" id="led"></div>
+      <div id="connectionStatus">Offline</div>
+    </div>
+    <div class="title">ATTAMATION</div>
+    <div style="width: 80px;"></div>
   </div>
 
-  <h1>ATTAMATION</h1>
+  <div class="container">
+    <div class="relay-card">
+      <div class="relay-title">Relay 1</div>
+      <button id="relay1Btn" class="relay-button" onclick="toggleRelay('relay1')">OFF</button>
+      <div class="status-text">Status = <span id="relay1Status">OFF</span></div>
+    </div>
 
-  <div class="relay-container">
-    <div class="relay-title">Relay 1</div>
-    <button id="relay1Btn" class="relay-button off" onclick="toggleRelay('relay1')">OFF</button>
-    <div class="status-text">Status = <span id="relay1Status">OFF</span></div>
-  </div>
+    <div class="relay-card">
+      <div class="relay-title">Relay 2</div>
+      <button id="relay2Btn" class="relay-button" onclick="toggleRelay('relay2')">OFF</button>
+      <div class="status-text">Status = <span id="relay2Status">OFF</span></div>
+    </div>
 
-  <div class="relay-container">
-    <div class="relay-title">Relay 2</div>
-    <button id="relay2Btn" class="relay-button off" onclick="toggleRelay('relay2')">OFF</button>
-    <div class="status-text">Status = <span id="relay2Status">OFF</span></div>
+    <div class="relay-card">
+      <div class="relay-title">Spare 1</div>
+      <button class="relay-button" disabled>OFF</button>
+      <div class="status-text">Status = OFF</div>
+    </div>
+
+    <div class="relay-card">
+      <div class="relay-title">Spare 2</div>
+      <button class="relay-button" disabled>OFF</button>
+      <div class="status-text">Status = OFF</div>
+    </div>
   </div>
 
   <script>
@@ -106,10 +157,8 @@
       const connectionStatus = document.getElementById('connectionStatus');
 
       client.on('connect', () => {
-        console.log('✅ Terhubung ke MQTT');
         led.style.backgroundColor = 'green';
         connectionStatus.innerText = 'Online';
-
         client.subscribe('esp/status/relay1');
         client.subscribe('esp/status/relay2');
         client.publish('esp/get_status', 'REQ');
@@ -120,8 +169,7 @@
         connectionStatus.innerText = 'Menyambung...';
       });
 
-      client.on('error', (error) => {
-        console.error('MQTT Error:', error);
+      client.on('error', () => {
         led.style.backgroundColor = 'red';
         connectionStatus.innerText = 'Error';
       });
@@ -133,32 +181,24 @@
 
       client.on('message', (topic, message) => {
         const msg = message.toString();
-
-        if (topic === 'esp/status/relay1') {
-          updateRelayStatusUI('relay1', msg);
-        }
-
-        if (topic === 'esp/status/relay2') {
-          updateRelayStatusUI('relay2', msg);
-        }
+        if (topic === 'esp/status/relay1') updateRelayStatusUI('relay1', msg);
+        if (topic === 'esp/status/relay2') updateRelayStatusUI('relay2', msg);
       });
 
       window.toggleRelay = function (relay) {
         const btn = document.getElementById(`${relay}Btn`);
         const newState = btn.innerText === 'OFF' ? 'ON' : 'OFF';
-
-        // Optimistic update tampilan tombol
         btn.innerText = newState;
         btn.classList.toggle('on', newState === 'ON');
-        btn.classList.toggle('off', newState === 'OFF');
-
-        // Kirim perintah ke ESP
         client.publish(`esp/${relay}`, newState);
       }
 
       function updateRelayStatusUI(relay, state) {
         const statusSpan = document.getElementById(`${relay}Status`);
         statusSpan.innerText = state;
+        const btn = document.getElementById(`${relay}Btn`);
+        btn.innerText = state;
+        btn.classList.toggle('on', state === 'ON');
       }
     };
   </script>
