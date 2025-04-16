@@ -2,165 +2,165 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>ATTAMATION</title>
+  <title>Kontrol Relay ESP8266</title>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #fefefe;
-      color: #1f2350;
-      margin: 0;
       padding: 30px;
-      text-align: center;
+      background-color: #f4f4f4;
+      margin: 0;
     }
 
-    .status-led {
+    .header {
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .status-indicator {
+      position: absolute;
+      top: 0;
+      left: 0;
       display: flex;
       align-items: center;
-      position: absolute;
-      top: 20px;
-      left: 20px;
+      font-weight: bold;
+      font-size: 14px;
     }
 
-    .led {
-      width: 15px;
-      height: 15px;
+    .status-dot {
+      width: 12px;
+      height: 12px;
       border-radius: 50%;
-      background-color: grey;
-      margin-right: 10px;
-      border: 1px solid #ccc;
+      margin-right: 6px;
+      background-color: red; /* default offline */
     }
 
     h1 {
-      font-size: 32px;
-      margin-bottom: 40px;
-      font-weight: bold;
-    }
-
-    .relay-container {
-      margin-bottom: 50px;
-    }
-
-    .relay-title {
+      margin-left: 24px;
       font-size: 24px;
-      margin-bottom: 15px;
     }
 
-    .relay-button {
-      font-size: 20px;
-      width: 100px;
-      height: 100px;
-      border: 2px solid #1f2350;
-      border-radius: 50%;
-      background-color: white;
-      color: #1f2350;
-      cursor: pointer;
-      margin-bottom: 10px;
+    .section {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
     }
 
-    .relay-button.on {
-      background-color: #4CAF50;
-      color: white;
-    }
-
-    .status-text {
+    button {
+      padding: 10px 20px;
       font-size: 18px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .on { background-color: #4CAF50; color: white; }
+    .off { background-color: #f44336; color: white; }
+
+    p.status {
+      font-size: 18px;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
 
-  <div class="status-led">
-    <div class="led" id="led"></div>
-    <div id="connectionStatus">Offline</div>
+  <div class="header">
+    <div class="status-indicator" id="arduinoStatus">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Offline</span>
+    </div>
+    <h1>ATTAMATION - Kontrol Relay ESP8266</h1>
   </div>
 
-  <h1>ATTAMATION</h1>
-
-  <div class="relay-container">
-    <div class="relay-title">Relay 1</div>
-    <button id="relay1Btn" class="relay-button off" onclick="toggleRelay('relay1')">OFF</button>
-    <div class="status-text">Status = <span id="relay1Status">OFF</span></div>
+  <div class="section">
+    <h2>Relay 1</h2>
+    <button id="relay1Btn" class="off" onclick="toggleRelay('relay1')">Relay 1: OFF</button>
+    <p class="status">Status (dari ESP): <span id="relay1Status">OFF</span></p>
   </div>
 
-  <div class="relay-container">
-    <div class="relay-title">Relay 2</div>
-    <button id="relay2Btn" class="relay-button off" onclick="toggleRelay('relay2')">OFF</button>
-    <div class="status-text">Status = <span id="relay2Status">OFF</span></div>
+  <div class="section">
+    <h2>Relay 2</h2>
+    <button id="relay2Btn" class="off" onclick="toggleRelay('relay2')">Relay 2: OFF</button>
+    <p class="status">Status (dari ESP): <span id="relay2Status">OFF</span></p>
   </div>
 
   <script>
-    window.onload = () => {
-      const options = {
-        clean: true,
-        connectTimeout: 4000,
-        clientId: 'webClient_' + Math.floor(Math.random() * 1000),
-        username: 'Atalarik',
-        password: 'Atalarik21'
-      };
-
-      const connectUrl = 'wss://3c745a388bec4b4fa3def162b723c4a4.s1.eu.hivemq.cloud:8884/mqtt';
-      const client = mqtt.connect(connectUrl, options);
-
-      const led = document.getElementById('led');
-      const connectionStatus = document.getElementById('connectionStatus');
-
-      client.on('connect', () => {
-        console.log('✅ Terhubung ke MQTT');
-        led.style.backgroundColor = 'green';
-        connectionStatus.innerText = 'Online';
-
-        client.subscribe('esp/status/relay1');
-        client.subscribe('esp/status/relay2');
-        client.publish('esp/get_status', 'REQ');
-      });
-
-      client.on('reconnect', () => {
-        led.style.backgroundColor = 'orange';
-        connectionStatus.innerText = 'Menyambung...';
-      });
-
-      client.on('error', (error) => {
-        console.error('MQTT Error:', error);
-        led.style.backgroundColor = 'red';
-        connectionStatus.innerText = 'Error';
-      });
-
-      client.on('offline', () => {
-        led.style.backgroundColor = 'grey';
-        connectionStatus.innerText = 'Offline';
-      });
-
-      client.on('message', (topic, message) => {
-        const msg = message.toString();
-
-        if (topic === 'esp/status/relay1') {
-          updateRelayStatusUI('relay1', msg);
-        }
-
-        if (topic === 'esp/status/relay2') {
-          updateRelayStatusUI('relay2', msg);
-        }
-      });
-
-      window.toggleRelay = function (relay) {
-        const btn = document.getElementById(`${relay}Btn`);
-        const newState = btn.innerText === 'OFF' ? 'ON' : 'OFF';
-
-        // Optimistic update tampilan tombol
-        btn.innerText = newState;
-        btn.classList.toggle('on', newState === 'ON');
-        btn.classList.toggle('off', newState === 'OFF');
-
-        // Kirim perintah ke ESP
-        client.publish(`esp/${relay}`, newState);
-      }
-
-      function updateRelayStatusUI(relay, state) {
-        const statusSpan = document.getElementById(`${relay}Status`);
-        statusSpan.innerText = state;
-      }
+    const options = {
+      clean: true,
+      connectTimeout: 4000,
+      clientId: 'webClient_' + Math.floor(Math.random() * 1000),
+      username: 'Atalarik',
+      password: 'Atalarik21'
     };
+
+    const connectUrl = 'wss://3c745a388bec4b4fa3def162b723c4a4.s1.eu.hivemq.cloud:8884/mqtt';
+    const client = mqtt.connect(connectUrl, options);
+
+    let heartbeatTimeout;
+
+    client.on('connect', () => {
+      console.log('✅ Terhubung ke MQTT');
+
+      client.subscribe('esp/status/relay1');
+      client.subscribe('esp/status/relay2');
+      client.subscribe('esp/status/heartbeat');
+
+      client.publish('esp/get_status', 'REQ');
+    });
+
+    client.on('message', (topic, message) => {
+      const msg = message.toString();
+
+      if (topic === 'esp/status/relay1') {
+        updateRelayUI('relay1', msg);
+      }
+
+      if (topic === 'esp/status/relay2') {
+        updateRelayUI('relay2', msg);
+      }
+
+      if (topic === 'esp/status/heartbeat') {
+        setArduinoOnline();
+      }
+    });
+
+    function toggleRelay(relay) {
+      const currentBtn = document.getElementById(`${relay}Btn`);
+      const newState = currentBtn.classList.contains('off') ? 'ON' : 'OFF';
+
+      // Optimistik update tombol
+      currentBtn.innerText = `${relay.charAt(0).toUpperCase() + relay.slice(1)}: ${newState}`;
+      currentBtn.classList.toggle('on', newState === 'ON');
+      currentBtn.classList.toggle('off', newState === 'OFF');
+
+      // Kirim perintah ke ESP
+      client.publish(`esp/${relay}`, newState);
+    }
+
+    function updateRelayUI(relay, state) {
+      const btn = document.getElementById(`${relay}Btn`);
+      const statusSpan = document.getElementById(`${relay}Status`);
+
+      statusSpan.innerText = state;
+      btn.innerText = `${relay.charAt(0).toUpperCase() + relay.slice(1)}: ${state}`;
+      btn.classList.toggle('on', state === 'ON');
+      btn.classList.toggle('off', state === 'OFF');
+    }
+
+    function setArduinoOnline() {
+      clearTimeout(heartbeatTimeout);
+      document.getElementById("statusDot").style.backgroundColor = "green";
+      document.getElementById("statusText").innerText = "Online";
+
+      // Timeout 10 detik → Offline kalau tidak ada heartbeat
+      heartbeatTimeout = setTimeout(() => {
+        document.getElementById("statusDot").style.backgroundColor = "red";
+        document.getElementById("statusText").innerText = "Offline";
+      }, 10000);
+    }
   </script>
 </body>
 </html>
