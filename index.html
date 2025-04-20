@@ -277,8 +277,16 @@
       document.getElementById('status-text').textContent = 'Offline';
     });
 
+    // Event untuk deteksi koneksi terputus
     client.on('close', () => {
       console.log('Disconnected');
+      document.getElementById('status-led').style.background = 'red';
+      document.getElementById('status-text').textContent = 'Offline';
+    });
+
+    // Deteksi offline dan hubungkan ulang
+    client.on('offline', () => {
+      console.log('MQTT client offline');
       document.getElementById('status-led').style.background = 'red';
       document.getElementById('status-text').textContent = 'Offline';
     });
