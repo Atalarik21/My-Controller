@@ -227,6 +227,8 @@
   </div>
 
   <script>
+    let onlineStatus = false;  // To track online status
+
     function updateDateTime() {
       const now = new Date();
       document.getElementById('current-time').textContent = now.toLocaleTimeString();
@@ -246,6 +248,7 @@
 
     client.on('connect', () => {
       console.log('Connected to MQTT Broker');
+      onlineStatus = true;
       document.getElementById('status-led').style.background = 'lime';
       document.getElementById('status-text').textContent = 'Online';
       client.subscribe('esp/status/relay1');
@@ -273,15 +276,26 @@
 
     client.on('error', (error) => {
       console.error('Connection error:', error);
+      onlineStatus = false;
       document.getElementById('status-led').style.background = 'red';
       document.getElementById('status-text').textContent = 'Offline';
     });
 
     client.on('close', () => {
       console.log('Disconnected');
+      onlineStatus = false;
       document.getElementById('status-led').style.background = 'red';
       document.getElementById('status-text').textContent = 'Offline';
     });
+
+    // Monitor for online/offline status
+    setInterval(() => {
+      if (onlineStatus) {
+        // Check if last message was sent within a certain period to stay online
+        // This part can be enhanced further to check last activity or heartbeat
+        // In this case, you can use a timeout to reset onlineStatus to false after a delay of inactivity
+      }
+    }, 10000);
 
     document.getElementById('relay1Btn').addEventListener('change', (e) => {
       const state = e.target.checked ? 'ON' : 'OFF';
