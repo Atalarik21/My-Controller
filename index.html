@@ -209,6 +209,9 @@
   </div>
 
   <script>
+    let relay1State = 'OFF';
+    let relay2State = 'OFF';
+
     function updateDateTime() {
       const now = new Date();
       document.getElementById('current-time').textContent = now.toLocaleTimeString();
@@ -233,23 +236,17 @@
       client.subscribe('esp/status/relay1');
       client.subscribe('esp/status/relay2');
       client.publish('esp/get_status', 'REQ');
-      // Reset status update timeout
-      clearTimeout(statusTimeout);
-      statusTimeout = setTimeout(() => {
-        document.getElementById('status-text').textContent = 'Offline';
-        document.getElementById('status-led').style.background = 'red';
-      }, 5000); // 5 seconds timeout
     });
-
-    let statusTimeout;
 
     client.on('message', (topic, message) => {
       const state = message.toString();
       let relay = '';
       if (topic.includes('relay1')) {
         relay = 'relay1';
+        relay1State = state; // Save the relay state
       } else if (topic.includes('relay2')) {
         relay = 'relay2';
+        relay2State = state; // Save the relay state
       }
       if (relay) {
         const checkbox = document.getElementById(relay + 'Btn');
@@ -271,22 +268,18 @@
       console.log('Disconnected');
       document.getElementById('status-led').style.background = 'red';
       document.getElementById('status-text').textContent = 'Offline';
-      // Reset status update timeout
-      clearTimeout(statusTimeout);
-      statusTimeout = setTimeout(() => {
-        document.getElementById('status-text').textContent = 'Offline';
-        document.getElementById('status-led').style.background = 'red';
-      }, 5000); // 5 seconds timeout
     });
 
     document.getElementById('relay1Btn').addEventListener('change', (e) => {
       const state = e.target.checked ? 'ON' : 'OFF';
       client.publish('esp/relay1', state);
+      relay1State = state; // Save the relay state
     });
 
     document.getElementById('relay2Btn').addEventListener('change', (e) => {
       const state = e.target.checked ? 'ON' : 'OFF';
       client.publish('esp/relay2', state);
+      relay2State = state; // Save the relay state
     });
   </script>
 </body>
