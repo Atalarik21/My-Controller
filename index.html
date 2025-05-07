@@ -554,6 +554,7 @@
             document.getElementById('temperature-fill').setAttribute('d', `${pathData} L${(tempHistory.length - 1) * 50},100 L0,100`);
         }
 
+        
         // Device control functionality
         function setupDeviceControls() {
             const deviceCards = document.querySelectorAll('.device-card');
@@ -562,28 +563,18 @@
                 const toggle = card.querySelector('input[type="checkbox"]');
                 const status = card.querySelector('.device-status');
                 
+                const device = card.getAttribute('data-device');
+
                 toggle.addEventListener('change', function() {
                     if (this.checked) {
                         card.classList.add('active');
                         status.textContent = "ON";
-                        
-                        // Special actions for specific devices
-                        const device = card.getAttribute('data-device');
-                        if (device === 'ac') {
-                            showNotification("Air conditioner turned on. Temperature will drop soon.");
-                            // Simulate temperature drop
-                            setTimeout(() => {
-                                const currentTemp = parseFloat(document.getElementById('temperature').textContent);
-                                document.getElementById('temperature').textContent = (currentTemp - 2).toFixed(1);
-                                updateTemperatureGraph(currentTemp - 2);
-                            }, 2000);
-                        }
                     } else {
                         card.classList.remove('active');
                         status.textContent = "OFF";
                     }
                     
-                    // Update energy usage when devices are toggled
+                    publishDeviceState(device, this.checked ? 'ON' : 'OFF');
                     updateEnergyUsage();
                 });
                 
@@ -592,71 +583,11 @@
                     if (e.target !== toggle && !e.target.classList.contains('slider')) {
                         toggle.checked = !toggle.checked;
                         toggle.dispatchEvent(new Event('change'));
-                      publishDeviceState(device, toggle.checked ? 'ON' : 'OFF');
                     }
                 });
             });
         }
 
-        // Update energy usage based on active devices
-        function updateEnergyUsage() {
-            const activeDevices = document.querySelectorAll('.device-card.active').length;
-            let usage = 0.2; // Base usage
-            
-            // Add usage for each active device
-            document.querySelectorAll('.device-card.active').forEach(card => {
-                const device = card.getAttribute('data-device');
-                switch(device) {
-                    case 'light-living':
-                    case 'light-kitchen':
-                        usage += 0.1;
-                        break;
-                    case 'ac':
-                        usage += 1.5;
-                        break;
-                    case 'tv':
-                        usage += 0.3;
-                        break;
-                    case 'speaker':
-                        usage += 0.05;
-                        break;
-                    case 'fan':
-                        usage += 0.2;
-                        break;
-                }
-            });
-            
-            // Cap at 5 kWh for visualization
-            usage = Math.min(5, usage);
-            
-            // Update display
-            document.getElementById('current-usage').textContent = usage.toFixed(1) + " kWh";
-            document.getElementById('usage-level').style.width = `${(usage / 5) * 100}%`;
-        }
-
-        // Notification system
-        function showNotification(message) {
-            const notification = document.getElementById('notification');
-            document.getElementById('notification-message').textContent = message;
-            notification.classList.add('show');
-            
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 5000);
-        }
-
-        // Initialize everything
-        function init() {
-            updateDateTime();
-            setInterval(updateDateTime, 1000);
-            
-            // Start with some graph data
-            for (let i = 0; i < 10; i++) {
-                tempHistory[i] = 22 + (Math.random() - 0.5) * 4;
-            }
-            updateTemperatureGraph(22);
-            
-            setInterval(updateTemperature, 3000);
             setupDeviceControls();
             updateEnergyUsage();
         }
