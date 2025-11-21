@@ -1,297 +1,184 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Attamation Room Control</title>
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Roboto', sans-serif;
-      background: linear-gradient(to bottom right, #1e1e2f, #2b2b45);
-      color: #f5f5f5;
-    }
-    .container {
-      max-width: 960px;
-      margin: auto;
-      padding: 20px;
-    }
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-    .status-indicator {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 14px;
-    }
-    .indicator {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: red;
-    }
-    .logo {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 24px;
-      font-weight: bold;
-      text-align: center;
-      flex-grow: 1;
-    }
-    .time-date {
-      font-size: 14px;
-      text-align: right;
-    }
-    .dashboard {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-      margin-top: 20px;
-    }
-    .panel {
-      flex: 1;
-      min-width: 300px;
-      background: #292947;
-      border-radius: 10px;
-      padding: 20px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    }
-    .panel-title {
-      font-weight: 600;
-      margin-bottom: 15px;
-      font-size: 16px;
-      color: #00ffff;
-    }
-    .temperature-display {
-      font-size: 24px;
-      margin-bottom: 10px;
-    }
-    .temperature-unit {
-      font-size: 18px;
-    }
-    .temperature-status {
-      font-size: 14px;
-      color: #4caf50;
-    }
-    .devices-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 15px;
-    }
-    .device-card {
-      background: #3b3b5b;
-      border-radius: 8px;
-      padding: 15px;
-      text-align: center;
-      box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
-    }
-    .device-icon i {
-      font-size: 20px;
-      margin-bottom: 5px;
-      color: #ffd700;
-    }
-    .device-name {
-      font-weight: 500;
-      margin-top: 5px;
-    }
-    .device-status {
-      font-size: 12px;
-      margin: 5px 0;
-    }
-    .toggle-switch {
-      position: relative;
-      display: inline-block;
-      width: 36px;
-      height: 20px;
-    }
-    .toggle-switch input {
-      display: none;
-    }
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0; left: 0;
-      right: 0; bottom: 0;
-      background-color: #ccc;
-      border-radius: 20px;
-      transition: .4s;
-    }
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 14px;
-      width: 14px;
-      left: 3px;
-      bottom: 3px;
-      background-color: white;
-      transition: .4s;
-      border-radius: 50%;
-    }
-    .toggle-switch input:checked + .slider {
-      background-color: #4caf50;
-    }
-    .toggle-switch input:checked + .slider:before {
-      transform: translateX(16px);
-    }
-    .notification {
-      margin-top: 30px;
-      background: #fff3cd;
-      border: 1px solid #ffeeba;
-      padding: 15px;
-      border-radius: 8px;
-      color: #000;
-    }
-  </style>
-</head>
+<!-- tambahkan sebelum </body> atau ganti script fetchData lama -->
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script>
+/* CONFIG - isi sesuai HiveMQ Cloud Anda */
+const WS_HOST = "a83ccc7ca89145d195e89865c270d0f2.s1.eu.hivemq.cloud";
+const WS_PORT = 8884; // HiveMQ Cloud WebSocket TLS port (wss)
+const WS_PATH = "/mqtt"; // kadang broker pakai path /mqtt; jika gagal, coba "" atau "/mqtt"
+const MQTT_USER = "Soil_System";
+const MQTT_PASS = "Soilsystem123";
 
-<body>
-  <div class="container">
-    <header>
-      <div class="status-indicator">
-        <div class="indicator" id="status-led"></div>
-        <span id="status-text">Offline</span>
-      </div>
-      <div class="logo">ATTAMATION</div>
-      <div class="time-date">
-        <div class="time" id="current-time">00:00:00</div>
-        <div class="date" id="current-date">January 1, 2023</div>
-      </div>
-    </header>
+/* topics (sama seperti device) */
+const TOPICS = {
+  temp: "soil/temperature",
+  hum: "soil/humidity",
+  moisture: "soil/moisture",
+  raw: "soil/raw",
+  pumpStatus: "soil/pump/status",
+  modeStatus: "soil/mode/status",
+  setpointStatus: "soil/setpoint/status",
+  pumpSet: "soil/pump/set",
+  modeSet: "soil/mode/set",
+  setpointSet: "soil/setpoint/set",
+  getStatus: "soil/get_status"
+};
 
-    <div class="dashboard">
-      <div class="panel">
-        <div class="panel-title">
-          <i class="fas fa-thermometer-half"></i> ROOM TEMPERATURE
-        </div>
-        <div class="temperature-display">
-          <div class="temperature-value" id="temperature">24.5<span class="temperature-unit">°C</span></div>
-          <div class="temperature-status" id="temperature-status">Comfortable</div>
-        </div>
-      </div>
+let useMQTT = false;
+let mqttClient = null;
+let userIsEditingSetpoint = false;
+let lastServerSetpoint = 40;
 
-      <div class="panel">
-        <div class="panel-title">
-          <i class="fas fa-lightbulb"></i> DEVICE CONTROL
-        </div>
-        <div class="devices-grid">
-          <div class="device-card" data-device="relay1">
-            <div class="device-icon"><i class="fas fa-toggle-on"></i></div>
-            <div class="device-name">Relay 1</div>
-            <div class="device-status">OFF</div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="relay1Btn">
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="device-card" data-device="relay2">
-            <div class="device-icon"><i class="fas fa-toggle-on"></i></div>
-            <div class="device-name">Relay 2</div>
-            <div class="device-status">OFF</div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="relay2Btn">
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="device-card">
-            <div class="device-icon"><i class="fas fa-ban"></i></div>
-            <div class="device-name">Spare 1</div>
-            <div class="device-status">OFF</div>
-            <label class="toggle-switch">
-              <input type="checkbox" disabled>
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="device-card">
-            <div class="device-icon"><i class="fas fa-ban"></i></div>
-            <div class="device-name">Spare 2</div>
-            <div class="device-status">OFF</div>
-            <label class="toggle-switch">
-              <input type="checkbox" disabled>
-              <span class="slider"></span>
-            </label>
-          </div>
-        </div>
-      </div>
-    </div>
+// existing UI helpers (clock etc.)
+function pad(n){return n<10?'0'+n:n;}
+function updateClock(){ 
+  var d=new Date(); 
+  document.getElementById('clock').innerText = pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds()); 
+  document.getElementById('date').innerText = d.toLocaleDateString(); 
+}
+setInterval(updateClock,1000); updateClock();
 
-    <div class="notification" id="notification">
-      <div class="notification-title">System Alert</div>
-      <div class="notification-message" id="notification-message">Temperature is rising above normal levels.</div>
-    </div>
-  </div>
+// UI editing handlers (same as before)
+document.getElementById('setpoint').addEventListener('focus', ()=> userIsEditingSetpoint = true);
+document.getElementById('setpoint').addEventListener('blur', ()=> setTimeout(()=> userIsEditingSetpoint=false,300));
+document.getElementById('setpoint').addEventListener('input', ()=> userIsEditingSetpoint = true);
 
-  <script>
-    function updateDateTime() {
-      const now = new Date();
-      document.getElementById('current-time').textContent = now.toLocaleTimeString();
-      document.getElementById('current-date').textContent = now.toDateString();
-    }
-    setInterval(updateDateTime, 1000);
-    updateDateTime();
-
-    // --- MQTT Connection ---
-    const client = mqtt.connect('wss://9fa472bc0c754eb488098ea8f4bb27f8.s1.eu.hivemq.cloud:8884/mqtt', {
-      clientId: 'webClient_' + Math.random().toString(16).substr(2, 8),
-      username: 'Attamationhtml',
-      password: 'Attamationhtml21',
-      clean: true,
-      connectTimeout: 4000
+// MQTT connect attempt
+function startMQTT() {
+  try {
+    // build URL: wss://host:port/path
+    let url = `wss://${WS_HOST}:${WS_PORT}${WS_PATH}`;
+    // client id
+    const clientId = 'webui-' + Math.random().toString(16).substr(2, 8);
+    mqttClient = mqtt.connect(url, {
+      clientId,
+      username: MQTT_USER,
+      password: MQTT_PASS,
+      keepalive: 30,
+      reconnectPeriod: 5000,
+      rejectUnauthorized: false // if broker has cert issues; set true for prod
     });
 
-    client.on('connect', () => {
-      console.log('Connected to MQTT Broker');
-      document.getElementById('status-led').style.background = 'lime';
-      document.getElementById('status-text').textContent = 'Online';
-      client.subscribe('esp/status/relay1');
-      client.subscribe('esp/status/relay2');
-      client.publish('esp/get_status', 'REQ');
+    mqttClient.on('connect', function () {
+      console.log('MQTT connected via WSS');
+      useMQTT = true;
+      // subscribe to status topics
+      mqttClient.subscribe(Object.values({
+        pumpStatus: TOPICS.pumpStatus,
+        modeStatus: TOPICS.modeStatus,
+        setpointStatus: TOPICS.setpointStatus,
+        temp: TOPICS.temp,
+        hum: TOPICS.hum,
+        moisture: TOPICS.moisture,
+        raw: TOPICS.raw
+      }));
+      // request current status
+      mqttClient.publish(TOPICS.getStatus, "");
     });
 
-    client.on('message', (topic, message) => {
-      const state = message.toString();
-      let relay = '';
-      if (topic.includes('relay1')) {
-        relay = 'relay1';
-      } else if (topic.includes('relay2')) {
-        relay = 'relay2';
-      }
-      if (relay) {
-        const checkbox = document.getElementById(relay + 'Btn');
-        const card = checkbox.closest('.device-card');
-        const status = card.querySelector('.device-status');
-
-        checkbox.checked = state === 'ON';
-        status.textContent = state;
+    mqttClient.on('message', function (topic, payload) {
+      const msg = payload.toString();
+      // Update UI according to topic
+      if (topic === TOPICS.pumpStatus) {
+        document.getElementById('pumpState').innerText = msg;
+      } else if (topic === TOPICS.modeStatus) {
+        document.getElementById('modeSelect').value = msg;
+        if (msg === 'MANUAL') document.getElementById('manualControls').style.display = 'flex';
+        else document.getElementById('manualControls').style.display = 'none';
+      } else if (topic === TOPICS.setpointStatus) {
+        if (!userIsEditingSetpoint) { document.getElementById('setpoint').value = msg; lastServerSetpoint = parseInt(msg||0); }
+      } else if (topic === TOPICS.temp) {
+        document.getElementById('tempVal').innerText = (msg==='null' ? '--' : parseFloat(msg).toFixed(1)+' °C');
+      } else if (topic === TOPICS.hum) {
+        document.getElementById('humVal').innerText = (msg==='null' ? '--' : parseFloat(msg).toFixed(1)+' %');
+      } else if (topic === TOPICS.moisture) {
+        document.getElementById('soilPercent').innerText = msg + ' %';
+      } else if (topic === TOPICS.raw) {
+        document.getElementById('soilRaw').innerText = msg;
       }
     });
 
-    client.on('error', (error) => {
-      console.error('Connection error:', error);
-      document.getElementById('status-led').style.background = 'red';
-      document.getElementById('status-text').textContent = 'Offline';
-    });
+    mqttClient.on('error', function(err){ console.warn('MQTT err', err); });
+    mqttClient.on('close', function(){ console.log('MQTT closed'); useMQTT = false; });
+  } catch (e) {
+    console.warn('MQTT start failed', e);
+    useMQTT = false;
+  }
+}
 
-    client.on('close', () => {
-      console.log('Disconnected');
-      document.getElementById('status-led').style.background = 'red';
-      document.getElementById('status-text').textContent = 'Offline';
-    });
+// fallback polling via local API
+async function fetchLocalData(){
+  try {
+    const res = await fetch('/api/data');
+    if (!res.ok) throw new Error('no local api');
+    const j = await res.json();
+    document.getElementById('soilPercent').innerText = j.soilPercent + ' %';
+    document.getElementById('soilRaw').innerText = j.soilRaw;
+    document.getElementById('tempVal').innerText = (j.temp <= -90 ? '--' : j.temp.toFixed(1)+' °C');
+    document.getElementById('humVal').innerText = (j.hum <= -0.5 ? '--' : j.hum.toFixed(1)+' %');
+    document.getElementById('pumpState').innerText = j.pump;
+    document.getElementById('modeSelect').value = j.mode;
+    if (!userIsEditingSetpoint) { document.getElementById('setpoint').value = j.setpoint; }
+    if (j.mode === 'MANUAL') document.getElementById('manualControls').style.display = 'flex';
+    else document.getElementById('manualControls').style.display = 'none';
+    document.querySelector('.ip-value').innerText = location.hostname;
+    return true;
+  } catch (e) {
+    // local API not available
+    return false;
+  }
+}
 
-    document.getElementById('relay1Btn').addEventListener('change', (e) => {
-      const state = e.target.checked ? 'ON' : 'OFF';
-      client.publish('esp/relay1', state);
-    });
+// unified fetchData: try MQTT first, otherwise local API
+async function fetchData(){
+  if (useMQTT) {
+    // when using MQTT we don't poll for sensor values, rely on broker updates.
+    // But we can still update IP label
+    document.querySelector('.ip-value').innerText = location.hostname;
+    return;
+  } else {
+    await fetchLocalData();
+  }
+}
 
-    document.getElementById('relay2Btn').addEventListener('change', (e) => {
-      const state = e.target.checked ? 'ON' : 'OFF';
-      client.publish('esp/relay2', state);
-    });
-  </script>
-</body>
-</html>
+// UI actions (mode, setpoint, pump) - will publish via MQTT if available, else call local API
+async function setMode(mode) {
+  if (useMQTT && mqttClient && mqttClient.connected) {
+    mqttClient.publish(TOPICS.modeSet, mode);
+  } else {
+    await fetch('/api/setmode', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({mode:mode})});
+  }
+}
+async function setSetpoint(sp) {
+  if (useMQTT && mqttClient && mqttClient.connected) {
+    mqttClient.publish(TOPICS.setpointSet, String(sp));
+  } else {
+    await fetch('/api/setpoint', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({setpoint:sp})});
+  }
+}
+async function setPump(state) {
+  // state: 1 = ON, 0 = OFF
+  if (useMQTT && mqttClient && mqttClient.connected) {
+    mqttClient.publish(TOPICS.pumpSet, state ? 'ON' : 'OFF');
+  } else {
+    await fetch('/api/pump', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({state: state})});
+  }
+}
+
+// wire UI buttons
+document.getElementById('modeSelect').addEventListener('change', async function(){
+  await setMode(this.value);
+});
+document.getElementById('setBtn').addEventListener('click', async function(){
+  const sp = parseInt(document.getElementById('setpoint').value);
+  userIsEditingSetpoint = false;
+  await setSetpoint(sp);
+  setTimeout(fetchData, 500);
+});
+document.getElementById('pumpOn').addEventListener('click', ()=> setPump(1));
+document.getElementById('pumpOff').addEventListener('click', ()=> setPump(0));
+
+// initialization: try MQTT, then start polling fallback
+startMQTT();
+setInterval(fetchData, 1500);
+fetchData();
+</script>
