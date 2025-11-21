@@ -1,248 +1,143 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>ATTAMATION - Soil Monitor</title>
-
-<!-- Google Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Device Configuration</title>
 
 <style>
-/* ====== CSS YANG SAMA PERSIS DARI PROGRAM ====== */
-:root {
-  --bg: #070617;
-  --card: #0f1220;
-  --accent: #00f1ff;
-  --accent2: #9b4dff;
-  --muted: #9aa3b2;
-  --glow: 0 8px 30px rgba(155, 77, 255, 0.12);
-}
-
-* { box-sizing: border-box; }
-
-html, body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  font-family: 'Inter', Arial, sans-serif;
-  background: radial-gradient(1200px 600px at 10% 10%, rgba(155, 77, 255, 0.06), transparent),
-    linear-gradient(180deg, #060613 0%, #0b0f1a 100%);
+body {
+  background: #0b0f1a;
   color: #e6eef8;
-  overflow-x: hidden;
-}
-
-.wrap { max-width: 1180px; margin: 0 auto; padding: 18px; }
-
-header {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 18px; flex-wrap: wrap; gap: 12px;
-}
-
-header h1 {
-  font-family: 'Orbitron', sans-serif; letter-spacing: 2px;
-  color: var(--accent2); margin: 0; font-size: 28px;
-}
-
-header .right { text-align: right; color: var(--muted); font-size: 14px; }
-
-.grid {
-  display: grid; grid-template-columns: 1fr 420px; gap: 18px;
+  font-family: Arial, sans-serif;
+  padding: 20px;
 }
 
 .card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.007));
-  border-radius: 14px;
+  background: #111726;
   padding: 20px;
-  box-shadow: var(--glow);
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  max-width: 600px;
+  margin: auto;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 0 20px rgba(0,0,50,0.3);
 }
 
-.big-stat {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; min-height: 360px;
+h2 {
+  margin-top: 0;
+  color: #00f1ff;
+  font-size: 22px;
+  text-align: center;
 }
 
-.big-stat-header {
+label {
+  display: block;
+  margin-top: 12px;
+  font-size: 14px;
+  color: #9aa3b2;
+}
+
+input {
   width: 100%;
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
+  padding: 10px;
+  margin-top: 6px;
+  border-radius: 8px;
+  border: none;
+  background: #0d1222;
+  color: #00f1ff;
 }
 
-.big-stat-title { font-size: 16px; color: var(--muted); }
-
-.ip-info { text-align: right; }
-.ip-label { font-size: 12px; color: var(--muted); }
-.ip-value { font-weight: 700; color: var(--accent); }
-
-.big-value {
-  font-family: 'Orbitron', sans-serif;
-  color: var(--accent);
-  font-size: 96px;
-  text-shadow: 0 6px 30px rgba(0, 241, 255, 0.08);
-  line-height: 1;
+button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 20px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(90deg,#00f1ff,#9b4dff);
+  color: #021;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 16px;
 }
 
-.subtitle { color: var(--muted); margin-top: 8px; }
-
-.small-row {
-  display: flex; gap: 12px; margin-top: 18px;
-  justify-content: center; flex-wrap: wrap;
+button:active {
+  transform: scale(0.97);
 }
 
-.stat-mini {
-  background: rgba(255, 255, 255, 0.02);
-  padding: 12px; border-radius: 10px;
-  min-width: 120px; text-align: center;
+.msg {
+  margin-top: 15px;
+  padding: 10px;
+  text-align: center;
+  border-radius: 6px;
+  display: none;
 }
-.stat-mini h4 { margin: 0; font-size: 16px; color: var(--muted); }
-.stat-mini p { margin: 6px 0 0 0; font-weight: 700; }
-
-/* Right side panel */
-.device-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-
-.device-card {
-  background: linear-gradient(180deg, #0b0f1a, #0b0f1a);
-  padding: 16px; border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.02);
-}
-
-.control-header {
-  display: flex; justify-content: space-between;
-  align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 12px;
-}
-
-.mode-select {
-  background: transparent; color: var(--accent);
-  border-radius: 8px; padding: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.03);
-}
-
-.pump-state { color: #ff66a3; font-weight: 700; }
-
-.controls { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
-
-.setpoint-input {
-  padding: 8px; border-radius: 8px;
-  background: transparent; border: 1px solid rgba(255, 255, 255, 0.04);
-  color: var(--accent); width: 90px;
-}
-
-/* Buttons */
-.btn {
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
-  color: #021; padding: 8px 12px; border-radius: 10px;
-  border: none; font-weight: 700; cursor: pointer; font-size: 14px;
-}
-
-.btn.secondary {
-  background: transparent; color: var(--muted);
-  border: 1px solid rgba(255, 255, 255, 0.03);
-}
-
-.manual-controls { display: none; gap: 8px; flex-wrap: wrap; }
-
-/* Responsive */
-@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
-@media (max-width: 600px) {
-  .big-value { font-size: 56px; }
-  .controls { flex-direction: column; align-items: stretch; }
-  .btn { width: 100%; }
-}
+.msg.ok { background: #003d24; color: #00ff9d; }
+.msg.err { background: #3d0000; color: #ff8080; }
 </style>
+
 </head>
-
 <body>
-<div class="wrap">
 
-  <header>
-    <h1>ATTAMATION</h1>
-    <div class="right">
-      <div id="clock">--:--:--</div>
-      <div id="date">--</div>
-    </div>
-  </header>
+<div class="card">
+  <h2>WiFi & MQTT Configuration</h2>
 
-  <div class="grid">
+  <label>WiFi SSID</label>
+  <input id="ssid" placeholder="Enter SSID" />
 
-    <!-- LEFT PANEL -->
-    <div class="card big-stat">
-      <div class="big-stat-header">
-        <div class="big-stat-title">ROOM SOIL MOISTURE</div>
-        <div class="ip-info">
-          <div class="ip-label">IP:</div>
-          <div class="ip-value">192.168.0.33</div>
-        </div>
-      </div>
+  <label>WiFi Password</label>
+  <input id="pass" placeholder="Enter Password" type="password" />
 
-      <div class="big-value" id="soilPercent">--</div>
-      <div class="subtitle">Soil Moisture</div>
+  <label>MQTT Server</label>
+  <input id="mqtt_server" placeholder="ex: broker.hivemq.com" />
 
-      <div class="small-row">
-        <div class="stat-mini"><h4>Temperature</h4><p id="tempVal">-- °C</p></div>
-        <div class="stat-mini"><h4>Humidity</h4><p id="humVal">-- %</p></div>
-        <div class="stat-mini"><h4>Soil Raw</h4><p id="soilRaw">--</p></div>
-      </div>
-    </div>
+  <label>MQTT Port</label>
+  <input id="mqtt_port" type="number" placeholder="8883" />
 
-    <!-- RIGHT PANEL -->
-    <div class="card">
-      <div class="control-header">
-        <div class="control-title">DEVICE CONTROL</div>
+  <label>MQTT Username</label>
+  <input id="mqtt_user" placeholder="MQTT Username" />
 
-        <select id="modeSelect" class="mode-select">
-          <option value="AUTO">AUTO</option>
-          <option value="MANUAL">MANUAL</option>
-        </select>
-      </div>
+  <label>MQTT Password</label>
+  <input id="mqtt_pass" type="password" placeholder="MQTT Password" />
 
-      <div class="device-grid">
-        <div class="device-card">
-          <div class="device-row">
-            <div>
-              <div class="device-name">Water Pump</div>
-              <div class="device-desc">Pump for irrigation</div>
-            </div>
-            <div class="pump-status">
-              <div class="pump-state">OFF</div>
-              <div class="status-label">Status</div>
-            </div>
-          </div>
+  <button onclick="saveConfig()">SAVE CONFIG</button>
 
-          <div class="controls">
-            <input id="setpoint" type="number" min="0" max="100" value="40" class="setpoint-input"/>
-            <button class="btn">SET</button>
-
-            <div id="manualControls" class="manual-controls">
-              <button class="btn">TURN ON</button>
-              <button class="btn secondary">TURN OFF</button>
-            </div>
-
-          </div>
-        </div>
-
-        <div class="info-text">
-          <div>Auto mode will run pump when soil % &lt; setpoint</div>
-          <div>Manual mode enables direct pump control</div>
-        </div>
-
-      </div>
-    </div>
-
-  </div>
+  <div class="msg" id="msg"></div>
 </div>
 
 <script>
-// Clock script
-function pad(n){return n<10?'0'+n:n;}
-function updateClock(){ 
-  var d=new Date(); 
-  document.getElementById('clock').innerText =
-    pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
-  document.getElementById('date').innerText = d.toLocaleDateString();
+function saveConfig() {
+  const data = {
+    ssid: document.getElementById("ssid").value,
+    pass: document.getElementById("pass").value,
+    mqtt_server: document.getElementById("mqtt_server").value,
+    mqtt_port: Number(document.getElementById("mqtt_port").value),
+    mqtt_user: document.getElementById("mqtt_user").value,
+    mqtt_pass: document.getElementById("mqtt_pass").value
+  };
+
+  fetch("/api/save", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  })
+  .then(r => {
+    if (r.status == 200) {
+      showMsg("Configuration saved. Restarting...", "ok");
+    } else {
+      showMsg("Failed to save config", "err");
+    }
+  })
+  .catch(() => {
+    showMsg("Cannot connect to ESP (If you open via GitHub, this is normal)", "err");
+  });
 }
-setInterval(updateClock,1000);
-updateClock();
+
+function showMsg(text, type) {
+  const box = document.getElementById("msg");
+  box.innerHTML = text;
+  box.className = "msg " + type;
+  box.style.display = "block";
+}
 </script>
 
 </body>
