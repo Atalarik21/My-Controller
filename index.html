@@ -1,204 +1,302 @@
 <!DOCTYPE html>
-
-<html>
+<html lang="id">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>ATTAMATION - Soil Monitor</title>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-<style>
-/* --- CSS sama persis dengan program 1 --- */
-:root {
-  --bg: #070617;
-  --card: #0f1220;
-  --accent: #00f1ff;
-  --accent2: #9b4dff;
-  --muted: #9aa3b2;
-  --glow: 0 8px 30px rgba(155, 77, 255, 0.12);
-}
-* { box-sizing: border-box; }
-html, body { height: 100%; margin: 0; padding: 0; font-family: 'Inter', Arial, sans-serif; background: radial-gradient(1200px 600px at 10% 10%, rgba(155, 77, 255, 0.06), transparent), linear-gradient(180deg, #060613 0%, #0b0f1a 100%); color: #e6eef8; overflow-x: hidden; }
-.wrap { max-width: 1180px; margin: 0 auto; padding: 18px; }
-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 12px; }
-header h1 { font-family: 'Orbitron', sans-serif; letter-spacing: 2px; color: var(--accent2); margin: 0; font-size: 28px; }
-header .right { text-align: right; color: var(--muted); font-size: 14px; }
-.grid { display: grid; grid-template-columns: 1fr 420px; gap: 18px; }
-.card { background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.007)); border-radius: 14px; padding: 20px; box-shadow: var(--glow); border: 1px solid rgba(255, 255, 255, 0.03); }
-.big-stat { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 360px; }
-.big-stat-header { width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
-.big-stat-title { font-size: 16px; color: var(--muted); }
-.ip-info { text-align: right; }
-.ip-label { font-size: 12px; color: var(--muted); }
-.ip-value { font-weight: 700; color: var(--accent); }
-.big-value { font-family: 'Orbitron', sans-serif; color: var(--accent); font-size: 96px; text-shadow: 0 6px 30px rgba(0, 241, 255, 0.08); line-height: 1; }
-.subtitle { color: var(--muted); margin-top: 8px; }
-.small-row { display: flex; gap: 12px; margin-top: 18px; justify-content: center; flex-wrap: wrap; }
-.stat-mini { background: rgba(255, 255, 255, 0.02); padding: 12px; border-radius: 10px; min-width: 120px; text-align: center; }
-.stat-mini h4 { margin: 0; font-size: 16px; color: var(--muted); }
-.stat-mini p { margin: 6px 0 0 0; font-weight: 700; }
-.device-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-.device-card { background: linear-gradient(180deg, #0b0f1a, #0b0f1a); padding: 16px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.02); }
-.control-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 12px; }
-.control-title { font-weight: 700; color: var(--muted); }
-.mode-toggle { display: flex; gap: 8px; align-items: center; }
-.mode-label { font-size: 12px; color: var(--muted); margin-right: 8px; }
-.mode-select { background: transparent; color: var(--accent); border-radius: 8px; padding: 6px; border: 1px solid rgba(255, 255, 255, 0.03); }
-.device-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-.device-name { font-weight: 600; }
-.device-desc { font-size: 12px; color: var(--muted); }
-.pump-status { text-align: right; }
-.pump-state { color: #ff66a3; font-weight: 700; }
-.status-label { font-size: 12px; color: var(--muted); }
-.controls { margin-top: 12px; display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
-.setpoint-group { display: flex; flex-direction: column; gap: 4px; }
-.setpoint-label { font-size: 12px; color: var(--muted); }
-.setpoint-input { padding: 8px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.04); background: transparent; color: var(--accent); width: 90px; font-size: 14px; }
-.btn { background: linear-gradient(90deg, var(--accent), var(--accent2)); color: #021; padding: 8px 12px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; font-size: 14px; white-space: nowrap; }
-.btn.secondary { background: transparent; color: var(--muted); border: 1px solid rgba(255, 255, 255, 0.03); }
-.manual-controls { display: none; margin-left: auto; gap: 8px; flex-wrap: wrap; }
-.info-text { font-size: 12px; color: var(--muted); text-align: center; padding-top: 10px; }
-.info-text div { margin-top: 6px; }
-/* Responsive */
-@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .big-value { font-size: 72px; } header h1 { font-size: 24px; } }
-@media (max-width: 600px) { .wrap { padding: 12px; } header h1 { font-size: 20px; } .big-value { font-size: 56px; } .big-stat { min-height: auto; padding: 18px 12px; } .card { padding: 16px; } .small-row { flex-direction: column; width: 100%; } .stat-mini { width: 100%; } .controls { flex-direction: column; align-items: stretch; } .setpoint-input { width: 100%; } .btn { width: 100%; } .manual-controls { margin-left: 0; width: 100%; } }
-@media (max-width: 400px) { .big-value { font-size: 48px; } header h1 { font-size: 18px; letter-spacing: 1px; } }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP8266 Relay Controller</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status.connecting {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .relay-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .relay-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .relay-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .relay-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .relay-status.on {
+            background: #28a745;
+            color: white;
+        }
+
+        .relay-status.off {
+            background: #6c757d;
+            color: white;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-on {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-on:hover {
+            background: #218838;
+        }
+
+        .btn-off {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-off:hover {
+            background: #c82333;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #6c757d;
+            font-size: 14px;
+        }
+    </style>
 </head>
 <body>
-<div class="wrap">
-<header>
-  <h1>ATTAMATION</h1>
-  <div class="right">
-    <div id="clock">--:--:--</div>
-    <div id="date">--</div>
-  </div>
-</header>
-<div class="grid">
-  <div class="card big-stat">
-    <div class="big-stat-header">
-      <div class="big-stat-title">ROOM SOIL MOISTURE</div>
-      <div class="ip-info">
-        <div class="ip-label">IP:</div>
-        <div class="ip-value" id="espIP">--</div>
-      </div>
-    </div>
-    <div class="big-value" id="soilPercent">--</div>
-    <div class="subtitle" id="soilLabel">Soil Moisture</div>
-    <div class="small-row">
-      <div class="stat-mini"><h4>Temperature</h4><p id="tempVal">-- °C</p></div>
-      <div class="stat-mini"><h4>Humidity</h4><p id="humVal">-- %</p></div>
-      <div class="stat-mini"><h4>Soil Raw</h4><p id="soilRaw">--</p></div>
-    </div>
-  </div>
+    <div class="container">
+        <h1>🔌 Kontrol Relay ESP8266</h1>
+        <div id="connectionStatus" class="status connecting">
+            Menghubungkan ke MQTT...
+        </div>
 
-  <div class="card">
-    <div class="control-header">
-      <div class="control-title">DEVICE CONTROL</div>
-      <div class="mode-toggle">
-        <div class="mode-label">Mode</div>
-        <select id="modeSelect" class="mode-select">
-          <option value="AUTO">AUTO</option>
-          <option value="MANUAL">MANUAL</option>
-        </select>
-      </div>
+        <div class="relay-card">
+            <div class="relay-header">
+                <div class="relay-name">Relay 1</div>
+                <div id="status1" class="relay-status off">OFF</div>
+            </div>
+            <div class="button-group">
+                <button class="btn-on" onclick="controlRelay(1, 'ON')" id="btn1on">ON</button>
+                <button class="btn-off" onclick="controlRelay(1, 'OFF')" id="btn1off">OFF</button>
+            </div>
+        </div>
+
+        <div class="relay-card">
+            <div class="relay-header">
+                <div class="relay-name">Relay 2</div>
+                <div id="status2" class="relay-status off">OFF</div>
+            </div>
+            <div class="button-group">
+                <button class="btn-on" onclick="controlRelay(2, 'ON')" id="btn2on">ON</button>
+                <button class="btn-off" onclick="controlRelay(2, 'OFF')" id="btn2off">OFF</button>
+            </div>
+        </div>
+
+        <div class="footer">
+            ESP8266 MQTT Controller v1.0
+        </div>
     </div>
 
-```
-<div class="device-grid">
-  <div class="device-card">
-    <div class="device-row">
-      <div>
-        <div class="device-name">Water Pump</div>
-        <div class="device-desc">Pump for irrigation</div>
-      </div>
-      <div class="pump-status">
-        <div class="pump-state" id="pumpState">OFF</div>
-        <div class="status-label">Status</div>
-      </div>
-    </div>
+    <script>
+        // Konfigurasi MQTT
+        const mqttConfig = {
+            host: '9fa472bc0c754eb488098ea8f4bb27f8.s1.eu.hivemq.cloud',
+            port: 8884,
+            protocol: 'wss',
+            username: 'Attamationesp',
+            password: 'Attamationesp21'
+        };
 
-    <div class="controls">
-      <div class="setpoint-group">
-        <div class="setpoint-label">Setpoint (%)</div>
-        <input id="setpoint" type="number" min="0" max="100" value="40" class="setpoint-input"/>
-      </div>
-      <button class="btn" id="setBtn">SET</button>
-      <div id="manualControls" class="manual-controls">
-        <button class="btn" id="pumpOn">TURN ON</button>
-        <button class="btn secondary" id="pumpOff">TURN OFF</button>
-      </div>
-    </div>
-  </div>
-  <div class="info-text">
-    <div>Auto mode will run pump when soil % &lt; setpoint</div>
-    <div>Manual mode enables direct pump control</div>
-  </div>
-</div>
-```
+        let client;
+        const connectionStatus = document.getElementById('connectionStatus');
 
-  </div>
-</div>
-<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-<script>
-let userIsEditingSetpoint = false;
-let lastServerSetpoint = 40;
+        // Fungsi untuk menghubungkan ke MQTT broker
+        function connectMQTT() {
+            const connectUrl = `${mqttConfig.protocol}://${mqttConfig.host}:${mqttConfig.port}/mqtt`;
+            
+            client = mqtt.connect(connectUrl, {
+                username: mqttConfig.username,
+                password: mqttConfig.password,
+                clientId: 'WebClient_' + Math.random().toString(16).substr(2, 8),
+                clean: true,
+                reconnectPeriod: 1000
+            });
 
-// Clock
-function pad(n){return n<10?'0'+n:n;}
-function updateClock(){
-var d=new Date();
-document.getElementById('clock').innerText = pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
-document.getElementById('date').innerText = d.toLocaleDateString();
-}
-setInterval(updateClock,1000); updateClock();
+            client.on('connect', () => {
+                console.log('Terhubung ke MQTT broker');
+                connectionStatus.className = 'status connected';
+                connectionStatus.textContent = '✓ Terhubung ke MQTT';
+                
+                // Subscribe ke topik status
+                client.subscribe('esp/status/relay1');
+                client.subscribe('esp/status/relay2');
+                
+                // Aktifkan semua tombol
+                enableButtons(true);
+            });
 
-// MQTT Setup
-const mqttHost = "a83ccc7ca89145d195e89865c270d0f2.s1.eu.hivemq.cloud";
-const mqttPort = 8883;
-const mqttUser = "Soil_System";
-const mqttPass = "Soilsystem123";
-const clientId = "webclient_" + Math.random().toString(16).substr(2, 8);
+            client.on('message', (topic, message) => {
+                const msg = message.toString();
+                console.log(`Pesan diterima [${topic}]: ${msg}`);
+                
+                if (topic === 'esp/status/relay1') {
+                    updateStatus(1, msg);
+                } else if (topic === 'esp/status/relay2') {
+                    updateStatus(2, msg);
+                }
+            });
 
-const client = mqtt.connect(`wss://${mqttHost}:8884/mqtt`, { clientId, username: mqttUser, password: mqttPass });
+            client.on('error', (error) => {
+                console.error('Error MQTT:', error);
+                connectionStatus.className = 'status disconnected';
+                connectionStatus.textContent = '✗ Koneksi Error';
+                enableButtons(false);
+            });
 
-client.on("connect", () => {
-console.log("Connected to MQTT");
-client.subscribe("soil_system/data");
-client.subscribe("soil_system/ack");
-client.publish("soil_system/get_data", "1");
-});
+            client.on('offline', () => {
+                console.log('MQTT offline');
+                connectionStatus.className = 'status disconnected';
+                connectionStatus.textContent = '✗ Terputus';
+                enableButtons(false);
+            });
 
-client.on("message", (topic, message) => {
-let msg = message.toString();
-if(topic=="soil_system/data"){
-let data = JSON.parse(msg);
-document.getElementById('soilPercent').innerText = data.soilPercent + ' %';
-document.getElementById('soilRaw').innerText = data.soilRaw;
-document.getElementById('tempVal').innerText = data.temp.toFixed(1)+' °C';
-document.getElementById('humVal').innerText = data.hum.toFixed(1)+' %';
-document.getElementById('pumpState').innerText = data.pump ? "ON":"OFF";
-document.getElementById('modeSelect').value = data.mode ? "AUTO":"MANUAL";
-document.getElementById('setpoint').value = data.setpoint;
-}
-});
+            client.on('reconnect', () => {
+                console.log('Mencoba menyambung kembali...');
+                connectionStatus.className = 'status connecting';
+                connectionStatus.textContent = 'Menyambung kembali...';
+            });
+        }
 
-// User interactions
-document.getElementById('setpoint').addEventListener('focus',()=>{userIsEditingSetpoint=true;});
-document.getElementById('setpoint').addEventListener('blur',()=>{setTimeout(()=>{userIsEditingSetpoint=false;},300);});
-document.getElementById('setpoint').addEventListener('input',()=>{userIsEditingSetpoint=true;});
+        // Fungsi untuk mengontrol relay
+        function controlRelay(relayNum, state) {
+            if (!client || !client.connected) {
+                alert('Tidak terhubung ke MQTT broker!');
+                return;
+            }
 
-document.getElementById('setBtn').addEventListener('click',()=> {
-let sp = parseInt(document.getElementById('setpoint').value);
-client.publish("soil_system/setpoint", JSON.stringify({setpoint: sp}));
-});
+            const topic = `esp/relay${relayNum}`;
+            client.publish(topic, state, { qos: 1 }, (error) => {
+                if (error) {
+                    console.error('Error publish:', error);
+                    alert('Gagal mengirim perintah!');
+                } else {
+                    console.log(`Perintah terkirim: ${topic} = ${state}`);
+                }
+            });
+        }
 
-document.getElementById('modeSelect').addEventListener('change',()=> {
-let mode = document.getElementById('modeSelect').value;
-client.publish("soil_system/setmode", JSON.stringify({mode}));
-});
+        // Fungsi untuk update status relay di UI
+        function updateStatus(relayNum, state) {
+            const statusElement = document.getElementById(`status${relayNum}`);
+            statusElement.textContent = state;
+            statusElement.className = `relay-status ${state.toLowerCase()}`;
+        }
 
-document.getElementById('pumpOn').addEventListener('click',()=>{ client.publish("soil_system/manualpump", JSON.stringify({state:1})); });
-document.getElementById('pumpOff').addEventListener('click',()=>{ client.publish("soil_system/manualpump", JSON.stringify({state:0})); }); </script>
+        // Fungsi untuk enable/disable tombol
+        function enableButtons(enable) {
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(button => {
+                button.disabled = !enable;
+            });
+        }
 
+        // Inisialisasi koneksi saat halaman dimuat
+        window.addEventListener('load', () => {
+            enableButtons(false);
+            connectMQTT();
+        });
+    </script>
 </body>
 </html>
