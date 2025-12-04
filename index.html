@@ -250,6 +250,30 @@
             height: 0;
         }
 
+        .toggle-switch input:disabled + .slider {
+            cursor: not-allowed;
+            opacity: 0.4;
+        }
+
+        .device-card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .device-card.loading {
+            opacity: 0.7;
+        }
+
+        .device-card.loading .device-icon {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
         .slider {
             position: absolute;
             cursor: pointer;
@@ -355,7 +379,7 @@
 <body>
     <div class="container">
         <header>
-            <div class="logo">⚡ SMART RELAY IoT</div>
+            <div class="logo">⚡ SMART RELAY</div>
             <div class="time-date">
                 <div class="time" id="current-time">00:00:00</div>
                 <div class="date" id="current-date">Loading...</div>
@@ -461,6 +485,11 @@
             password: 'Vvkniot123'
         };
 
+        // Track connection state and pending commands
+        let isConnected = false;
+        let pendingCommands = {};
+        const COMMAND_TIMEOUT = 5000; // 5 seconds timeout
+
         // Initialize MQTT Client
         const client = new Paho.MQTT.Client(
             mqttConfig.host,
@@ -471,7 +500,9 @@
         // Connection lost callback
         client.onConnectionLost = (response) => {
             console.log('Connection lost:', response.errorMessage);
+            isConnected = false;
             updateConnectionStatus('disconnected');
+            disableAllControls();
             showNotification('Koneksi MQTT terputus! Mencoba reconnect...');
             setTimeout(connectMQTT, 5000);
         };
@@ -482,8 +513,10 @@
             
             if (message.destinationName === 'esp/status/relay1') {
                 syncDeviceState('relay1', message.payloadString);
+                clearPendingCommand('relay1');
             } else if (message.destinationName === 'esp/status/relay2') {
                 syncDeviceState('relay2', message.payloadString);
+                clearPendingCommand('relay2');
             }
         };
 
@@ -495,19 +528,24 @@
                 password: mqttConfig.password,
                 onSuccess: () => {
                     console.log('Connected to MQTT');
+                    isConnected = true;
                     updateConnectionStatus('connected');
+                    enableAllControls();
                     showNotification('Berhasil terhubung ke MQTT broker!');
                     
                     client.subscribe('esp/status/relay1');
                     client.subscribe('esp/status/relay2');
                     
+                    // Request current status from ESP8266
                     setTimeout(() => {
                         publishMessage('esp/get_status', 'request');
                     }, 500);
                 },
                 onFailure: (error) => {
                     console.error('Connection failed:', error.errorMessage);
+                    isConnected = false;
                     updateConnectionStatus('disconnected');
+                    disableAllControls();
                     showNotification('Gagal terhubung! Retry dalam 5 detik...');
                     setTimeout(connectMQTT, 5000);
                 }
@@ -543,6 +581,66 @@
             } else {
                 card.classList.remove('active');
             }
+            
+            // Remove loading state
+            card.classList.remove('loading');
+        }
+
+        // Enable all controls
+        function enableAllControls() {
+            const deviceCards = document.querySelectorAll('.device-card');
+            deviceCards.forEach(card => {
+                card.classList.remove('disabled');
+                const checkbox = card.querySelector('input[type="checkbox"]');
+                checkbox.disabled = false;
+            });
+        }
+
+        // Disable all controls
+        function disableAllControls() {
+            const deviceCards = document.querySelectorAll('.device-card');
+            deviceCards.forEach(card => {
+                card.classList.add('disabled');
+                card.classList.remove('loading');
+                const checkbox = card.querySelector('input[type="checkbox"]');
+                checkbox.disabled = true;
+            });
+        }
+
+        // Set loading state for device
+        function setDeviceLoading(deviceId, isLoading) {
+            const card = document.querySelector(`.device-card[data-device="${deviceId}"]`);
+            if (!card) return;
+            
+            if (isLoading) {
+                card.classList.add('loading');
+            } else {
+                card.classList.remove('loading');
+            }
+        }
+
+        // Clear pending command
+        function clearPendingCommand(deviceId) {
+            if (pendingCommands[deviceId]) {
+                clearTimeout(pendingCommands[deviceId]);
+                delete pendingCommands[deviceId];
+                setDeviceLoading(deviceId, false);
+            }
+        }
+
+        // Handle command timeout
+        function handleCommandTimeout(deviceId, expectedState) {
+            showNotification(`Timeout! Tidak ada respons dari Relay ${deviceId === 'relay1' ? '1' : '2'}. Periksa koneksi ESP8266.`);
+            
+            // Revert UI to previous state
+            const card = document.querySelector(`.device-card[data-device="${deviceId}"]`);
+            if (!card) return;
+            
+            const checkbox = card.querySelector('input[type="checkbox"]');
+            checkbox.checked = !checkbox.checked; // Revert
+            
+            setDeviceLoading(deviceId, false);
+            delete pendingCommands[deviceId];
         }
 
         // Setup device controls
@@ -555,25 +653,34 @@
                 const deviceId = card.getAttribute('data-device');
 
                 toggle.addEventListener('change', function() {
-                    const newState = this.checked ? 'ON' : 'OFF';
-                    
-                    if (this.checked) {
-                        card.classList.add('active');
-                        status.textContent = 'ON';
-                    } else {
-                        card.classList.remove('active');
-                        status.textContent = 'OFF';
+                    // Check if connected to MQTT
+                    if (!isConnected) {
+                        showNotification('Tidak terhubung ke MQTT! Tidak dapat mengontrol relay.');
+                        this.checked = !this.checked; // Revert
+                        return;
                     }
+
+                    const newState = this.checked ? 'ON' : 'OFF';
+                    const relayNum = deviceId === 'relay1' ? '1' : '2';
+                    
+                    // Set loading state
+                    setDeviceLoading(deviceId, true);
                     
                     // Publish to MQTT
-                    const relayNum = deviceId === 'relay1' ? '1' : '2';
                     publishMessage(`esp/relay${relayNum}`, newState);
                     
-                    showNotification(`Relay ${relayNum} ${newState === 'ON' ? 'dinyalakan' : 'dimatikan'}`);
+                    // Set timeout for response
+                    pendingCommands[deviceId] = setTimeout(() => {
+                        handleCommandTimeout(deviceId, newState);
+                    }, COMMAND_TIMEOUT);
+                    
+                    console.log(`Waiting for confirmation from Relay ${relayNum}...`);
                 });
                 
                 // Click card to toggle
                 card.addEventListener('click', function(e) {
+                    if (!isConnected) return; // Prevent click if not connected
+                    
                     if (e.target !== toggle && !e.target.classList.contains('slider')) {
                         toggle.checked = !toggle.checked;
                         toggle.dispatchEvent(new Event('change'));
@@ -587,6 +694,7 @@
             updateDateTime();
             setInterval(updateDateTime, 1000);
             setupDeviceControls();
+            disableAllControls(); // Start with controls disabled
             connectMQTT();
         }
 
@@ -594,4 +702,3 @@
     </script>
 </body>
 </html>
-
