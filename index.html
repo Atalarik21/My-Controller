@@ -3,9 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kontrol Relay ESP8266</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <title>Smart Relay Control</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        :root {
+            --primary: #00f7ff;
+            --secondary: #ff00aa;
+            --dark: #0a0a1a;
+            --darker: #050510;
+            --light: #e0e0ff;
+            --accent: #7b2dff;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,301 +23,556 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--dark);
+            color: var(--light);
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(123, 45, 255, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(0, 247, 255, 0.1) 0%, transparent 20%);
         }
 
         .container {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 800px;
-            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
         }
 
-        h1 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 2em;
-        }
-
-        .status-bar {
-            text-align: center;
-            padding: 10px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-            font-weight: bold;
-        }
-
-        .status-bar.connected {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-bar.disconnected {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .status-bar.connecting {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .relay-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            margin-top: 30px;
-        }
-
-        .relay-card {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .relay-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-        }
-
-        .relay-header {
+        header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 3rem;
+            border-bottom: 1px solid rgba(0, 247, 255, 0.3);
+            padding-bottom: 1rem;
         }
 
-        .relay-title {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #333;
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 10px rgba(0, 247, 255, 0.3);
         }
 
-        .status-indicator {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
+        .time-date {
+            font-family: 'Orbitron', sans-serif;
+            text-align: right;
+        }
+
+        .time {
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+
+        .date {
+            font-size: 0.9rem;
+            color: var(--light);
+            opacity: 0.8;
+        }
+
+        .connection-status {
+            text-align: center;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 500;
+            font-size: 1rem;
+            border: 1px solid;
             animation: pulse 2s infinite;
         }
 
-        .status-indicator.on {
-            background: #28a745;
-            box-shadow: 0 0 10px #28a745;
+        .connection-status.connected {
+            background: rgba(0, 247, 255, 0.1);
+            border-color: var(--primary);
+            color: var(--primary);
         }
 
-        .status-indicator.off {
-            background: #dc3545;
-            box-shadow: 0 0 10px #dc3545;
+        .connection-status.disconnected {
+            background: rgba(255, 0, 170, 0.1);
+            border-color: var(--secondary);
+            color: var(--secondary);
+        }
+
+        .connection-status.connecting {
+            background: rgba(123, 45, 255, 0.1);
+            border-color: var(--accent);
+            color: var(--accent);
         }
 
         @keyframes pulse {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            50% { opacity: 0.7; }
         }
 
-        .status-text {
-            text-align: center;
-            font-size: 1.2em;
-            font-weight: bold;
-            margin: 20px 0;
-            padding: 10px;
-            border-radius: 8px;
+        .panel {
+            background: linear-gradient(145deg, rgba(10, 10, 26, 0.8), rgba(5, 5, 16, 0.9));
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 247, 255, 0.1);
+            position: relative;
+            overflow: hidden;
         }
 
-        .status-text.on {
-            color: #28a745;
-            background: #d4edda;
+        .panel::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            z-index: -1;
+            background: linear-gradient(45deg, var(--primary), var(--secondary), var(--accent));
+            border-radius: 16px;
+            opacity: 0.3;
         }
 
-        .status-text.off {
-            color: #dc3545;
-            background: #f8d7da;
-        }
-
-        .toggle-btn {
-            width: 100%;
-            padding: 15px;
-            border: none;
-            border-radius: 10px;
-            font-size: 1.1em;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
+        .panel-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             text-transform: uppercase;
         }
 
-        .toggle-btn.on {
-            background: linear-gradient(135deg, #28a745, #20c997);
-            color: white;
+        .panel-title i {
+            margin-right: 0.7rem;
+            font-size: 1.7rem;
         }
 
-        .toggle-btn.on:hover {
-            background: linear-gradient(135deg, #218838, #1aa179);
-            transform: scale(1.02);
+        .devices-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
         }
 
-        .toggle-btn.off {
-            background: linear-gradient(135deg, #dc3545, #c82333);
-            color: white;
+        .device-card {
+            background: rgba(20, 20, 40, 0.6);
+            border-radius: 15px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 247, 255, 0.1);
+            position: relative;
+            overflow: hidden;
         }
 
-        .toggle-btn.off:hover {
-            background: linear-gradient(135deg, #bd2130, #a71d2a);
-            transform: scale(1.02);
+        .device-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 247, 255, 0.2);
+            border-color: rgba(0, 247, 255, 0.3);
         }
 
-        .toggle-btn:active {
-            transform: scale(0.98);
+        .device-card.active {
+            background: rgba(0, 247, 255, 0.1);
+            border-color: var(--primary);
+            box-shadow: 0 0 30px rgba(0, 247, 255, 0.3);
         }
 
-        .info-box {
-            margin-top: 30px;
-            padding: 20px;
-            background: #e7f3ff;
-            border-left: 4px solid #2196F3;
-            border-radius: 5px;
+        .device-card.active::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
         }
 
-        .info-box h3 {
-            color: #1976D2;
-            margin-bottom: 10px;
+        .device-icon {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            color: var(--light);
+            transition: all 0.3s ease;
         }
 
-        .info-box p {
-            color: #555;
-            line-height: 1.6;
+        .device-card.active .device-icon {
+            color: var(--primary);
+            text-shadow: 0 0 20px rgba(0, 247, 255, 0.8);
+            animation: glow 2s infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 20px rgba(0, 247, 255, 0.8); }
+            50% { text-shadow: 0 0 30px rgba(0, 247, 255, 1); }
+        }
+
+        .device-name {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .device-status {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            color: var(--secondary);
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            background: rgba(255, 0, 170, 0.1);
+            border: 1px solid var(--secondary);
+        }
+
+        .device-card.active .device-status {
+            color: var(--primary);
+            background: rgba(0, 247, 255, 0.1);
+            border-color: var(--primary);
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 70px;
+            height: 34px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .4s;
+            border-radius: 34px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 24px;
+            width: 24px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--light);
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+
+        input:checked + .slider {
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            border-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(36px);
+            background-color: var(--dark);
+            box-shadow: 0 0 10px rgba(0, 247, 255, 0.5);
+        }
+
+        .energy-usage {
+            margin-top: 3rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .energy-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .energy-title i {
+            margin-right: 0.5rem;
+        }
+
+        .usage-meter {
+            height: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-top: 1rem;
+            overflow: hidden;
+            border: 1px solid rgba(0, 247, 255, 0.2);
+        }
+
+        .usage-level {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border-radius: 10px;
+            transition: width 0.5s ease;
+            box-shadow: 0 0 10px rgba(0, 247, 255, 0.5);
+        }
+
+        .usage-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.8rem;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: rgba(10, 10, 26, 0.95);
+            border-left: 4px solid var(--primary);
+            padding: 1.2rem;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            transform: translateX(200%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 350px;
+            border: 1px solid rgba(0, 247, 255, 0.3);
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification-title {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .notification-message {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: var(--light);
         }
 
         @media (max-width: 768px) {
             .container {
-                padding: 20px;
+                padding: 1rem;
             }
 
-            h1 {
-                font-size: 1.5em;
+            .logo {
+                font-size: 1.5rem;
             }
 
-            .relay-grid {
+            .time {
+                font-size: 1.2rem;
+            }
+
+            .devices-grid {
                 grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .device-card {
+                padding: 1.5rem;
+            }
+
+            .notification {
+                right: 1rem;
+                left: 1rem;
+                max-width: none;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🔌 Dashboard Kontrol Relay</h1>
-        <div id="connectionStatus" class="status-bar connecting">
-            ⏳ Menghubungkan ke MQTT...
+        <header>
+            <div class="logo">⚡ SMART RELAY</div>
+            <div class="time-date">
+                <div class="time" id="current-time">00:00:00</div>
+                <div class="date" id="current-date">Loading...</div>
+            </div>
+        </header>
+
+        <div class="connection-status connecting" id="connection-status">
+            <i class="fas fa-circle-notch fa-spin"></i> MENGHUBUNGKAN KE MQTT...
         </div>
 
-        <div class="relay-grid">
-            <!-- Relay 1 -->
-            <div class="relay-card">
-                <div class="relay-header">
-                    <span class="relay-title">Relay 1</span>
-                    <div class="status-indicator off" id="indicator1"></div>
-                </div>
-                <div class="status-text off" id="status1">STATUS: OFF</div>
-                <button class="toggle-btn off" id="btn1" onclick="toggleRelay(1)">
-                    Nyalakan
-                </button>
+        <div class="panel">
+            <div class="panel-title">
+                <i class="fas fa-bolt"></i> KONTROL PERANGKAT
             </div>
 
-            <!-- Relay 2 -->
-            <div class="relay-card">
-                <div class="relay-header">
-                    <span class="relay-title">Relay 2</span>
-                    <div class="status-indicator off" id="indicator2"></div>
+            <div class="devices-grid">
+                <!-- Relay 1 -->
+                <div class="device-card" data-device="relay1">
+                    <div class="device-icon"><i class="fas fa-lightbulb"></i></div>
+                    <div class="device-name">Relay 1</div>
+                    <div class="device-status">OFF</div>
+                    <label class="toggle-switch">
+                        <input type="checkbox">
+                        <span class="slider"></span>
+                    </label>
                 </div>
-                <div class="status-text off" id="status2">STATUS: OFF</div>
-                <button class="toggle-btn off" id="btn2" onclick="toggleRelay(2)">
-                    Nyalakan
-                </button>
-            </div>
-        </div>
 
-        <div class="info-box">
-            <h3>📡 Informasi Koneksi</h3>
-            <p><strong>MQTT Broker:</strong> 771040a7965b41c29ded951686f04f72.s1.eu.hivemq.cloud</p>
-            <p><strong>Port:</strong> 8884 (WebSocket Secure)</p>
-            <p><strong>Status:</strong> <span id="mqttStatus">Menghubungkan...</span></p>
+                <!-- Relay 2 -->
+                <div class="device-card" data-device="relay2">
+                    <div class="device-icon"><i class="fas fa-plug"></i></div>
+                    <div class="device-name">Relay 2</div>
+                    <div class="device-status">OFF</div>
+                    <label class="toggle-switch">
+                        <input type="checkbox">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="energy-usage">
+                <div class="energy-title">
+                    <i class="fas fa-chart-line"></i> STATUS PENGGUNAAN
+                </div>
+                <div class="usage-meter">
+                    <div class="usage-level" id="usage-level"></div>
+                </div>
+                <div class="usage-stats">
+                    <span>0 Device</span>
+                    <span id="current-usage">0 Active</span>
+                    <span>2 Total</span>
+                </div>
+            </div>
         </div>
     </div>
 
+    <div class="notification" id="notification">
+        <div class="notification-title">
+            <i class="fas fa-info-circle"></i> NOTIFIKASI SISTEM
+        </div>
+        <div class="notification-message" id="notification-message"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script>
-        // Konfigurasi MQTT
+        // Update time and date
+        function updateDateTime() {
+            const now = new Date();
+            const time = now.toLocaleTimeString('id-ID', { hour12: false });
+            document.getElementById('current-time').textContent = time;
+            
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const date = now.toLocaleDateString('id-ID', options);
+            document.getElementById('current-date').textContent = date;
+        }
+
+        // Show notification
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            const messageEl = document.getElementById('notification-message');
+            messageEl.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 4000);
+        }
+
+        // Update energy usage display
+        function updateEnergyUsage() {
+            const activeDevices = document.querySelectorAll('.device-card.active').length;
+            const usageLevel = document.getElementById('usage-level');
+            const currentUsage = document.getElementById('current-usage');
+            
+            const percentage = (activeDevices / 2) * 100;
+            usageLevel.style.width = percentage + '%';
+            currentUsage.textContent = `${activeDevices} Active`;
+        }
+
+        // Update connection status
+        function updateConnectionStatus(status) {
+            const statusEl = document.getElementById('connection-status');
+            
+            if (status === 'connected') {
+                statusEl.className = 'connection-status connected';
+                statusEl.innerHTML = '<i class="fas fa-check-circle"></i> TERHUBUNG KE MQTT BROKER';
+            } else if (status === 'disconnected') {
+                statusEl.className = 'connection-status disconnected';
+                statusEl.innerHTML = '<i class="fas fa-times-circle"></i> TERPUTUS DARI MQTT BROKER';
+            } else {
+                statusEl.className = 'connection-status connecting';
+                statusEl.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> MENGHUBUNGKAN KE MQTT...';
+            }
+        }
+
+        // MQTT Configuration
         const mqttConfig = {
             host: '771040a7965b41c29ded951686f04f72.s1.eu.hivemq.cloud',
-            port: 8884, // WebSocket Secure port
+            port: 8884,
             clientId: 'web_' + Math.random().toString(16).substr(2, 8),
             username: 'vvkn_iot',
             password: 'Vvkniot123'
         };
 
-        // Status relay
-        let relayStates = {
-            1: false,
-            2: false
-        };
-
-        // Inisialisasi MQTT Client
+        // Initialize MQTT Client
         const client = new Paho.MQTT.Client(
             mqttConfig.host,
             mqttConfig.port,
             mqttConfig.clientId
         );
 
-        // Callback saat koneksi terputus
+        // Connection lost callback
         client.onConnectionLost = (response) => {
-            console.log('Koneksi terputus:', response.errorMessage);
+            console.log('Connection lost:', response.errorMessage);
             updateConnectionStatus('disconnected');
+            showNotification('Koneksi MQTT terputus! Mencoba reconnect...');
+            setTimeout(connectMQTT, 5000);
         };
 
-        // Callback saat menerima pesan
+        // Message arrived callback
         client.onMessageArrived = (message) => {
-            console.log('Pesan diterima:', message.destinationName, message.payloadString);
+            console.log('Message:', message.destinationName, message.payloadString);
             
             if (message.destinationName === 'esp/status/relay1') {
-                updateRelayUI(1, message.payloadString === 'ON');
+                syncDeviceState('relay1', message.payloadString);
             } else if (message.destinationName === 'esp/status/relay2') {
-                updateRelayUI(2, message.payloadString === 'ON');
+                syncDeviceState('relay2', message.payloadString);
             }
         };
 
-        // Fungsi untuk connect ke MQTT
+        // Connect to MQTT
         function connectMQTT() {
             const options = {
                 useSSL: true,
                 userName: mqttConfig.username,
                 password: mqttConfig.password,
                 onSuccess: () => {
-                    console.log('Terhubung ke MQTT broker');
+                    console.log('Connected to MQTT');
                     updateConnectionStatus('connected');
+                    showNotification('Berhasil terhubung ke MQTT broker!');
                     
-                    // Subscribe ke topik status
                     client.subscribe('esp/status/relay1');
                     client.subscribe('esp/status/relay2');
                     
-                    // Request status awal
                     setTimeout(() => {
                         publishMessage('esp/get_status', 'request');
                     }, 500);
                 },
                 onFailure: (error) => {
-                    console.error('Gagal terhubung:', error.errorMessage);
+                    console.error('Connection failed:', error.errorMessage);
                     updateConnectionStatus('disconnected');
-                    // Retry setelah 5 detik
+                    showNotification('Gagal terhubung! Retry dalam 5 detik...');
                     setTimeout(connectMQTT, 5000);
                 }
             };
@@ -315,70 +580,85 @@
             client.connect(options);
         }
 
-        // Fungsi untuk publish pesan
+        // Publish message
         function publishMessage(topic, payload) {
             if (client.isConnected()) {
                 const message = new Paho.MQTT.Message(payload);
                 message.destinationName = topic;
                 client.send(message);
-                console.log('Pesan terkirim:', topic, payload);
+                console.log('Published:', topic, payload);
             }
         }
 
-        // Fungsi toggle relay
-        function toggleRelay(relayNum) {
-            const newState = !relayStates[relayNum];
-            const command = newState ? 'ON' : 'OFF';
-            publishMessage(`esp/relay${relayNum}`, command);
-        }
+        // Sync device state from MQTT
+        function syncDeviceState(deviceId, state) {
+            const card = document.querySelector(`.device-card[data-device="${deviceId}"]`);
+            if (!card) return;
 
-        // Update UI relay
-        function updateRelayUI(relayNum, isOn) {
-            relayStates[relayNum] = isOn;
+            const checkbox = card.querySelector('input[type="checkbox"]');
+            const status = card.querySelector('.device-status');
             
-            const btn = document.getElementById(`btn${relayNum}`);
-            const status = document.getElementById(`status${relayNum}`);
-            const indicator = document.getElementById(`indicator${relayNum}`);
+            const isOn = (state === 'ON');
+            checkbox.checked = isOn;
+            status.textContent = state;
             
             if (isOn) {
-                btn.className = 'toggle-btn on';
-                btn.textContent = 'Matikan';
-                status.className = 'status-text on';
-                status.textContent = 'STATUS: ON';
-                indicator.className = 'status-indicator on';
+                card.classList.add('active');
             } else {
-                btn.className = 'toggle-btn off';
-                btn.textContent = 'Nyalakan';
-                status.className = 'status-text off';
-                status.textContent = 'STATUS: OFF';
-                indicator.className = 'status-indicator off';
+                card.classList.remove('active');
             }
-        }
-
-        // Update status koneksi
-        function updateConnectionStatus(status) {
-            const statusBar = document.getElementById('connectionStatus');
-            const mqttStatus = document.getElementById('mqttStatus');
             
-            if (status === 'connected') {
-                statusBar.className = 'status-bar connected';
-                statusBar.innerHTML = '✅ Terhubung ke MQTT Broker';
-                mqttStatus.textContent = 'Terhubung';
-            } else if (status === 'disconnected') {
-                statusBar.className = 'status-bar disconnected';
-                statusBar.innerHTML = '❌ Terputus dari MQTT Broker';
-                mqttStatus.textContent = 'Terputus';
-            } else {
-                statusBar.className = 'status-bar connecting';
-                statusBar.innerHTML = '⏳ Menghubungkan ke MQTT...';
-                mqttStatus.textContent = 'Menghubungkan...';
-            }
+            updateEnergyUsage();
         }
 
-        // Mulai koneksi saat halaman dimuat
-        window.addEventListener('load', () => {
+        // Setup device controls
+        function setupDeviceControls() {
+            const deviceCards = document.querySelectorAll('.device-card');
+            
+            deviceCards.forEach(card => {
+                const toggle = card.querySelector('input[type="checkbox"]');
+                const status = card.querySelector('.device-status');
+                const deviceId = card.getAttribute('data-device');
+
+                toggle.addEventListener('change', function() {
+                    const newState = this.checked ? 'ON' : 'OFF';
+                    
+                    if (this.checked) {
+                        card.classList.add('active');
+                        status.textContent = 'ON';
+                    } else {
+                        card.classList.remove('active');
+                        status.textContent = 'OFF';
+                    }
+                    
+                    // Publish to MQTT
+                    const relayNum = deviceId === 'relay1' ? '1' : '2';
+                    publishMessage(`esp/relay${relayNum}`, newState);
+                    
+                    showNotification(`Relay ${relayNum} ${newState === 'ON' ? 'dinyalakan' : 'dimatikan'}`);
+                    updateEnergyUsage();
+                });
+                
+                // Click card to toggle
+                card.addEventListener('click', function(e) {
+                    if (e.target !== toggle && !e.target.classList.contains('slider')) {
+                        toggle.checked = !toggle.checked;
+                        toggle.dispatchEvent(new Event('change'));
+                    }
+                });
+            });
+        }
+
+        // Initialize
+        function init() {
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            setupDeviceControls();
+            updateEnergyUsage();
             connectMQTT();
-        });
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
