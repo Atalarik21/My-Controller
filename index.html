@@ -1,20 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Attamation Room Control</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+    <title>Kontrol Relay ESP8266</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <style>
-        :root {
-            --primary: #00f7ff;
-            --secondary: #ff00aa;
-            --dark: #0a0a1a;
-            --darker: #050510;
-            --light: #e0e0ff;
-            --accent: #7b2dff;
-        }
-
         * {
             margin: 0;
             padding: 0;
@@ -22,624 +13,372 @@
         }
 
         body {
-            font-family: 'Roboto', sans-serif;
-            background-color: var(--dark);
-            color: var(--light);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            overflow-x: hidden;
-            background-image: 
-                radial-gradient(circle at 10% 20%, rgba(123, 45, 255, 0.1) 0%, transparent 20%),
-                radial-gradient(circle at 90% 80%, rgba(0, 247, 255, 0.1) 0%, transparent 20%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
         }
 
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
         }
 
-        header {
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .status-bar {
+            text-align: center;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+
+        .status-bar.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-bar.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-bar.connecting {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .relay-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .relay-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .relay-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .relay-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 3rem;
-            border-bottom: 1px solid rgba(0, 247, 255, 0.3);
-            padding-bottom: 1rem;
+            margin-bottom: 20px;
         }
 
-        .logo {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 2rem;
-            font-weight: 700;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            text-shadow: 0 0 10px rgba(0, 247, 255, 0.3);
+        .relay-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
         }
 
-        .time-date {
-            font-family: 'Orbitron', sans-serif;
-            text-align: right;
+        .status-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
         }
 
-        .time {
-            font-size: 1.5rem;
-            color: var(--primary);
+        .status-indicator.on {
+            background: #28a745;
+            box-shadow: 0 0 10px #28a745;
         }
 
-        .date {
-            font-size: 0.9rem;
-            color: var(--light);
-            opacity: 0.8;
+        .status-indicator.off {
+            background: #dc3545;
+            box-shadow: 0 0 10px #dc3545;
         }
 
-        .dashboard {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-bottom: 2rem;
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
 
-        .panel {
-            background: linear-gradient(145deg, rgba(10, 10, 26, 0.8), rgba(5, 5, 16, 0.9));
-            border-radius: 15px;
-            padding: 1.5rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(0, 247, 255, 0.1);
-            position: relative;
-            overflow: hidden;
+        .status-text {
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 8px;
         }
 
-        .panel::before {
-            content: '';
-            position: absolute;
-            top: -2px;
-            left: -2px;
-            right: -2px;
-            bottom: -2px;
-            z-index: -1;
-            background: linear-gradient(45deg, var(--primary), var(--secondary), var(--accent));
-            border-radius: 16px;
-            opacity: 0.3;
+        .status-text.on {
+            color: #28a745;
+            background: #d4edda;
         }
 
-        .panel-title {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.2rem;
-            margin-bottom: 1.5rem;
-            color: var(--primary);
-            display: flex;
-            align-items: center;
+        .status-text.off {
+            color: #dc3545;
+            background: #f8d7da;
         }
 
-        .panel-title i {
-            margin-right: 0.5rem;
-            font-size: 1.4rem;
-        }
-
-        .temperature-display {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem 0;
-        }
-
-        .temperature-value {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 5rem;
-            font-weight: 700;
-            background: linear-gradient(90deg, var(--primary), var(--light));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            position: relative;
-            text-shadow: 0 0 15px rgba(0, 247, 255, 0.5);
-        }
-
-        .temperature-unit {
-            font-size: 2rem;
-            opacity: 0.7;
-            vertical-align: super;
-            margin-left: 0.2rem;
-        }
-
-        .temperature-status {
-            margin-top: 1rem;
-            font-size: 1.2rem;
-            color: var(--light);
-            opacity: 0.8;
-        }
-
-        .temperature-graph {
-            height: 150px;
+        .toggle-btn {
             width: 100%;
-            margin-top: 2rem;
-            position: relative;
-        }
-
-        .graph-line {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            stroke: var(--primary);
-            fill: none;
-            stroke-width: 2;
-        }
-
-        .graph-fill {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            fill: url(#temperature-gradient);
-            opacity: 0.2;
-        }
-
-        .devices-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .device-card {
-            background: rgba(20, 20, 40, 0.6);
-            border-radius: 12px;
-            padding: 1.2rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
-            border: 1px solid rgba(0, 247, 255, 0.1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .device-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 247, 255, 0.1);
-            border-color: rgba(0, 247, 255, 0.3);
-        }
-
-        .device-card.active {
-            background: rgba(0, 247, 255, 0.1);
-            border-color: var(--primary);
-        }
-
-        .device-card.active::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--primary);
-        }
-
-        .device-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-            color: var(--light);
-        }
-
-        .device-card.active .device-icon {
-            color: var(--primary);
-            text-shadow: 0 0 10px rgba(0, 247, 255, 0.5);
-        }
-
-        .device-name {
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-            text-align: center;
-        }
-
-        .device-status {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 0.8rem;
-            color: var(--secondary);
             text-transform: uppercase;
         }
 
-        .device-card.active .device-status {
-            color: var(--primary);
+        .toggle-btn.on {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
         }
 
-        .toggle-switch {
-            position: relative;
-            width: 50px;
-            height: 24px;
-            margin-top: 0.5rem;
+        .toggle-btn.on:hover {
+            background: linear-gradient(135deg, #218838, #1aa179);
+            transform: scale(1.02);
         }
 
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
+        .toggle-btn.off {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
         }
 
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(255, 255, 255, 0.1);
-            transition: .4s;
-            border-radius: 24px;
+        .toggle-btn.off:hover {
+            background: linear-gradient(135deg, #bd2130, #a71d2a);
+            transform: scale(1.02);
         }
 
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 16px;
-            width: 16px;
-            left: 4px;
-            bottom: 4px;
-            background-color: var(--light);
-            transition: .4s;
-            border-radius: 50%;
+        .toggle-btn:active {
+            transform: scale(0.98);
         }
 
-        input:checked + .slider {
-            background-color: var(--primary);
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(26px);
-            background-color: var(--dark);
-        }
-
-        .energy-usage {
-            margin-top: 2rem;
-        }
-
-        .usage-meter {
-            height: 10px;
-            background: rgba(255, 255, 255, 0.1);
+        .info-box {
+            margin-top: 30px;
+            padding: 20px;
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
             border-radius: 5px;
-            margin-top: 0.5rem;
-            overflow: hidden;
         }
 
-        .usage-level {
-            height: 100%;
-            width: 35%;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            border-radius: 5px;
-            transition: width 0.5s ease;
+        .info-box h3 {
+            color: #1976D2;
+            margin-bottom: 10px;
         }
 
-        .usage-stats {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 0.5rem;
-            font-size: 0.8rem;
-            opacity: 0.8;
-        }
-
-        .notification {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            background: rgba(10, 10, 26, 0.9);
-            border-left: 4px solid var(--primary);
-            padding: 1rem;
-            border-radius: 5px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            transform: translateX(200%);
-            transition: transform 0.3s ease;
-            z-index: 1000;
-            max-width: 300px;
-        }
-
-        .notification.show {
-            transform: translateX(0);
-        }
-
-        .notification-title {
-            font-family: 'Orbitron', sans-serif;
-            color: var(--primary);
-            margin-bottom: 0.5rem;
-        }
-
-        .notification-message {
-            font-size: 0.9rem;
-            line-height: 1.4;
+        .info-box p {
+            color: #555;
+            line-height: 1.6;
         }
 
         @media (max-width: 768px) {
-            .dashboard {
-                grid-template-columns: 1fr;
+            .container {
+                padding: 20px;
             }
 
-            .devices-grid {
-                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .relay-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
     <div class="container">
-        <header>
-            <div class="logo">ATTAMATION</div>
-            <div class="time-date">
-                <div class="time" id="current-time">00:00:00</div>
-                <div class="date" id="current-date">January 1, 2023</div>
-            </div>
-        </header>
+        <h1>🔌 Dashboard Kontrol Relay</h1>
+        <div id="connectionStatus" class="status-bar connecting">
+            ⏳ Menghubungkan ke MQTT...
+        </div>
 
-        <div class="dashboard">
-            <div class="panel">
-                <div class="panel-title">
-                    <i class="fas fa-thermometer-half"></i> ROOM TEMPERATURE
+        <div class="relay-grid">
+            <!-- Relay 1 -->
+            <div class="relay-card">
+                <div class="relay-header">
+                    <span class="relay-title">Relay 1</span>
+                    <div class="status-indicator off" id="indicator1"></div>
                 </div>
-                <div class="temperature-display">
-                    <div class="temperature-value" id="temperature">24.5<span class="temperature-unit">°C</span></div>
-                    <div class="temperature-status" id="temperature-status">Comfortable</div>
-                </div>
-                <div class="temperature-graph">
-                    <svg width="100%" height="100%" viewBox="0 0 500 100" preserveAspectRatio="none">
-                        <defs>
-                            <linearGradient id="temperature-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stop-color="var(--primary)" />
-                                <stop offset="100%" stop-color="var(--darker)" />
-                            </linearGradient>
-                        </defs>
-                        <path class="graph-line" id="temperature-line" d="M0,100 L50,80 L100,70 L150,75 L200,60 L250,65 L300,70 L350,75 L400,80 L450,85 L500,90" />
-                        <path class="graph-fill" id="temperature-fill" d="M0,100 L50,80 L100,70 L150,75 L200,60 L250,65 L300,70 L350,75 L400,80 L450,85 L500,90 L500,100 L0,100" />
-                    </svg>
-                </div>
+                <div class="status-text off" id="status1">STATUS: OFF</div>
+                <button class="toggle-btn off" id="btn1" onclick="toggleRelay(1)">
+                    Nyalakan
+                </button>
             </div>
 
-            <div class="panel">
-                <div class="panel-title">
-                    <i class="fas fa-lightbulb"></i> DEVICE CONTROL
+            <!-- Relay 2 -->
+            <div class="relay-card">
+                <div class="relay-header">
+                    <span class="relay-title">Relay 2</span>
+                    <div class="status-indicator off" id="indicator2"></div>
                 </div>
-                <div class="devices-grid">
-                    <div class="device-card active" data-device="light-living">
-                        <div class="device-icon"><i class="fas fa-lightbulb"></i></div>
-                        <div class="device-name">Living Room Light</div>
-                        <div class="device-status">ON</div>
-                        <label class="toggle-switch">
-                            <input type="checkbox" checked>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-
-                    <div class="device-card" data-device="light-kitchen">
-                        <div class="device-icon"><i class="fas fa-lightbulb"></i></div>
-                        <div class="device-name">Kitchen Light</div>
-                        <div class="device-status">OFF</div>
-                        <label class="toggle-switch">
-                            <input type="checkbox">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-
-                    <div class="device-card" data-device="ac">
-                        <div class="device-icon"><i class="fas fa-snowflake"></i></div>
-                        <div class="device-name">Air Conditioner</div>
-                        <div class="device-status">OFF</div>
-                        <label class="toggle-switch">
-                            <input type="checkbox">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-
-                    <div class="device-card" data-device="tv">
-                        <div class="device-icon"><i class="fas fa-tv"></i></div>
-                        <div class="device-name">Smart TV</div>
-                        <div class="device-status">OFF</div>
-                        <label class="toggle-switch">
-                            <input type="checkbox">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-
-                    <div class="device-card" data-device="speaker">
-                        <div class="device-icon"><i class="fas fa-music"></i></div>
-                        <div class="device-name">Smart Speaker</div>
-                        <div class="device-status">OFF</div>
-                        <label class="toggle-switch">
-                            <input type="checkbox">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-
-                    <div class="device-card" data-device="fan">
-                        <div class="device-icon"><i class="fas fa-fan"></i></div>
-                        <div class="device-name">Ceiling Fan</div>
-                        <div class="device-status">OFF</div>
-                        <label class="toggle-switch">
-                            <input type="checkbox">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="energy-usage">
-                    <div class="panel-title">
-                        <i class="fas fa-bolt"></i> ENERGY USAGE
-                    </div>
-                    <div class="usage-meter">
-                        <div class="usage-level" id="usage-level"></div>
-                    </div>
-                    <div class="usage-stats">
-                        <span>0 kWh</span>
-                        <span id="current-usage">1.2 kWh</span>
-                        <span>5 kWh</span>
-                    </div>
-                </div>
+                <div class="status-text off" id="status2">STATUS: OFF</div>
+                <button class="toggle-btn off" id="btn2" onclick="toggleRelay(2)">
+                    Nyalakan
+                </button>
             </div>
+        </div>
+
+        <div class="info-box">
+            <h3>📡 Informasi Koneksi</h3>
+            <p><strong>MQTT Broker:</strong> 771040a7965b41c29ded951686f04f72.s1.eu.hivemq.cloud</p>
+            <p><strong>Port:</strong> 8884 (WebSocket Secure)</p>
+            <p><strong>Status:</strong> <span id="mqttStatus">Menghubungkan...</span></p>
         </div>
     </div>
 
-    <div class="notification" id="notification">
-        <div class="notification-title">System Alert</div>
-        <div class="notification-message" id="notification-message">Temperature is rising above normal levels.</div>
-    </div>
-
     <script>
-        // Update time and date
-        function updateDateTime() {
-            const now = new Date();
-            
-            // Format time
-            const time = now.toLocaleTimeString('en-US', { hour12: false });
-            document.getElementById('current-time').textContent = time;
-            
-            // Format date
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const date = now.toLocaleDateString('en-US', options);
-            document.getElementById('current-date').textContent = date;
-        }
+        // Konfigurasi MQTT
+        const mqttConfig = {
+            host: '771040a7965b41c29ded951686f04f72.s1.eu.hivemq.cloud',
+            port: 8884, // WebSocket Secure port
+            clientId: 'web_' + Math.random().toString(16).substr(2, 8),
+            username: 'vvkn_iot',
+            password: 'Vvkniot123'
+        };
 
-        // Update temperature with random values (simulating real data)
-        function updateTemperature() {
-            // Simulate temperature changes
-            const currentTemp = parseFloat(document.getElementById('temperature').textContent);
-            const change = (Math.random() - 0.5) * 0.5; // Random change between -0.25 and +0.25
-            let newTemp = currentTemp + change;
+        // Status relay
+        let relayStates = {
+            1: false,
+            2: false
+        };
+
+        // Inisialisasi MQTT Client
+        const client = new Paho.MQTT.Client(
+            mqttConfig.host,
+            mqttConfig.port,
+            mqttConfig.clientId
+        );
+
+        // Callback saat koneksi terputus
+        client.onConnectionLost = (response) => {
+            console.log('Koneksi terputus:', response.errorMessage);
+            updateConnectionStatus('disconnected');
+        };
+
+        // Callback saat menerima pesan
+        client.onMessageArrived = (message) => {
+            console.log('Pesan diterima:', message.destinationName, message.payloadString);
             
-            // Keep temperature within reasonable bounds
-            newTemp = Math.max(18, Math.min(32, newTemp));
-            newTemp = Math.round(newTemp * 10) / 10; // Round to 1 decimal
-            
-            document.getElementById('temperature').textContent = newTemp.toFixed(1);
-            
-            // Update status based on temperature
-            const statusElement = document.getElementById('temperature-status');
-            if (newTemp < 20) {
-                statusElement.textContent = "Cool";
-                statusElement.style.color = "var(--primary)";
-            } else if (newTemp > 27) {
-                statusElement.textContent = "Hot";
-                statusElement.style.color = "var(--secondary)";
-                showNotification("Temperature is rising above normal levels. Consider turning on the AC.");
-            } else {
-                statusElement.textContent = "Comfortable";
-                statusElement.style.color = "var(--light)";
+            if (message.destinationName === 'esp/status/relay1') {
+                updateRelayUI(1, message.payloadString === 'ON');
+            } else if (message.destinationName === 'esp/status/relay2') {
+                updateRelayUI(2, message.payloadString === 'ON');
             }
-            
-            // Update graph
-            updateTemperatureGraph(newTemp);
-            
-            // Simulate energy usage changes based on devices
-            updateEnergyUsage();
-        }
+        };
 
-        // Update temperature graph
-        const tempHistory = Array(10).fill(22); // Initialize with 10 values of 22°C
-
-        function updateTemperatureGraph(newTemp) {
-            // Add new temperature to history
-            tempHistory.push(newTemp);
-            tempHistory.shift(); // Remove oldest value
-            
-            // Create path data for the graph
-            const pathData = tempHistory.map((temp, i) => {
-                const x = i * 50;
-                const y = 100 - ((temp - 15) * 5); // Scale temperature to fit graph
-                return `${i === 0 ? 'M' : 'L'}${x},${y}`;
-            }).join(' ');
-            
-            document.getElementById('temperature-line').setAttribute('d', pathData);
-            document.getElementById('temperature-fill').setAttribute('d', `${pathData} L${(tempHistory.length - 1) * 50},100 L0,100`);
-        }
-
-        
-        // Device control functionality
-        function setupDeviceControls() {
-            const deviceCards = document.querySelectorAll('.device-card');
-            
-            deviceCards.forEach(card => {
-                const toggle = card.querySelector('input[type="checkbox"]');
-                const status = card.querySelector('.device-status');
-                
-                const device = card.getAttribute('data-device');
-
-                toggle.addEventListener('change', function() {
-                    if (this.checked) {
-                        card.classList.add('active');
-                        status.textContent = "ON";
-                    } else {
-                        card.classList.remove('active');
-                        status.textContent = "OFF";
-                    }
+        // Fungsi untuk connect ke MQTT
+        function connectMQTT() {
+            const options = {
+                useSSL: true,
+                userName: mqttConfig.username,
+                password: mqttConfig.password,
+                onSuccess: () => {
+                    console.log('Terhubung ke MQTT broker');
+                    updateConnectionStatus('connected');
                     
-                    publishDeviceState(device, this.checked ? 'ON' : 'OFF');
-                    updateEnergyUsage();
-                });
-                
-                // Click anywhere on card to toggle
-                card.addEventListener('click', function(e) {
-                    if (e.target !== toggle && !e.target.classList.contains('slider')) {
-                        toggle.checked = !toggle.checked;
-                        toggle.dispatchEvent(new Event('change'));
-                    }
-                });
-            });
+                    // Subscribe ke topik status
+                    client.subscribe('esp/status/relay1');
+                    client.subscribe('esp/status/relay2');
+                    
+                    // Request status awal
+                    setTimeout(() => {
+                        publishMessage('esp/get_status', 'request');
+                    }, 500);
+                },
+                onFailure: (error) => {
+                    console.error('Gagal terhubung:', error.errorMessage);
+                    updateConnectionStatus('disconnected');
+                    // Retry setelah 5 detik
+                    setTimeout(connectMQTT, 5000);
+                }
+            };
+
+            client.connect(options);
         }
 
-            setupDeviceControls();
-            updateEnergyUsage();
+        // Fungsi untuk publish pesan
+        function publishMessage(topic, payload) {
+            if (client.isConnected()) {
+                const message = new Paho.MQTT.Message(payload);
+                message.destinationName = topic;
+                client.send(message);
+                console.log('Pesan terkirim:', topic, payload);
+            }
         }
 
-        // Start the app
-        window.addEventListener('DOMContentLoaded', init);
+        // Fungsi toggle relay
+        function toggleRelay(relayNum) {
+            const newState = !relayStates[relayNum];
+            const command = newState ? 'ON' : 'OFF';
+            publishMessage(`esp/relay${relayNum}`, command);
+        }
+
+        // Update UI relay
+        function updateRelayUI(relayNum, isOn) {
+            relayStates[relayNum] = isOn;
+            
+            const btn = document.getElementById(`btn${relayNum}`);
+            const status = document.getElementById(`status${relayNum}`);
+            const indicator = document.getElementById(`indicator${relayNum}`);
+            
+            if (isOn) {
+                btn.className = 'toggle-btn on';
+                btn.textContent = 'Matikan';
+                status.className = 'status-text on';
+                status.textContent = 'STATUS: ON';
+                indicator.className = 'status-indicator on';
+            } else {
+                btn.className = 'toggle-btn off';
+                btn.textContent = 'Nyalakan';
+                status.className = 'status-text off';
+                status.textContent = 'STATUS: OFF';
+                indicator.className = 'status-indicator off';
+            }
+        }
+
+        // Update status koneksi
+        function updateConnectionStatus(status) {
+            const statusBar = document.getElementById('connectionStatus');
+            const mqttStatus = document.getElementById('mqttStatus');
+            
+            if (status === 'connected') {
+                statusBar.className = 'status-bar connected';
+                statusBar.innerHTML = '✅ Terhubung ke MQTT Broker';
+                mqttStatus.textContent = 'Terhubung';
+            } else if (status === 'disconnected') {
+                statusBar.className = 'status-bar disconnected';
+                statusBar.innerHTML = '❌ Terputus dari MQTT Broker';
+                mqttStatus.textContent = 'Terputus';
+            } else {
+                statusBar.className = 'status-bar connecting';
+                statusBar.innerHTML = '⏳ Menghubungkan ke MQTT...';
+                mqttStatus.textContent = 'Menghubungkan...';
+            }
+        }
+
+        // Mulai koneksi saat halaman dimuat
+        window.addEventListener('load', () => {
+            connectMQTT();
+        });
     </script>
-
-<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-<script>
-  const client = mqtt.connect('wss://9fa472bc0c754eb488098ea8f4bb27f8.s1.eu.hivemq.cloud:8884/mqtt', {
-    clientId: 'webClient_' + Math.random().toString(16).substr(2, 8),
-    username: 'Attamationhtml',
-    password: 'Attamationhtml21',
-    clean: true,
-    connectTimeout: 4000
-  });
-
-  client.on('connect', () => {
-    console.log('Connected to MQTT Broker');
-    client.subscribe('esp/status/relay1');
-    client.subscribe('esp/status/relay2');
-    client.publish('esp/get_status', 'REQ');
-  });
-
-  client.on('message', (topic, message) => {
-    const state = message.toString();
-    if (topic === 'esp/status/relay1') {
-      syncDeviceState('light-living', state);
-    } else if (topic === 'esp/status/relay2') {
-      syncDeviceState('light-kitchen', state);
-    }
-  });
-
-  function syncDeviceState(deviceId, state) {
-    const card = document.querySelector(`.device-card[data-device="${deviceId}"]`);
-    const checkbox = card.querySelector('input[type="checkbox"]');
-    const status = card.querySelector('.device-status');
-
-    checkbox.checked = (state === 'ON');
-    status.textContent = state;
-    card.classList.toggle('active', state === 'ON');
-  }
-
-  function publishDeviceState(deviceId, state) {
-    if (deviceId === 'light-living') {
-      client.publish('esp/relay1', state);
-    } else if (deviceId === 'light-kitchen') {
-      client.publish('esp/relay2', state);
-    }
-  }
-</script>
-
 </body>
 </html>
